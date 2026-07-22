@@ -71,7 +71,12 @@ saved locally — the page does **not** depend on Figma being open.
    ```html
    <script src="data/springfield.js"></script>
    ```
-4. **Refresh** the browser.
+4. **Refresh** the browser to preview locally.
+5. **To publish it to SharePoint**, bundle that center into a single file and
+   upload it (see "Publishing / embedding" below):
+   ```
+   bash build.sh data/springfield.js
+   ```
 
 ### The data model (per center)
 
@@ -121,61 +126,68 @@ in `css/theme.css` to restyle.
 
 ---
 
-## Publishing / embedding — recommendation
+## Publishing / embedding in SharePoint
 
 **This content is internal/sensitive, so it must NOT go on the public internet.**
-That single fact drives every choice below.
+The approach below keeps everything inside SharePoint, behind your org's normal
+Microsoft 365 login — no separate hosting, no public exposure.
 
-**Short version:** host these static files somewhere **only your organization can
-reach** (behind your normal Microsoft 365 / SSO login), then embed the page into
-SharePoint with the **Embed web part** (an `<iframe>`) pointed at that internal
-URL. Do **not** paste the HTML/JS directly into a SharePoint page — modern
-SharePoint strips scripts for security.
+### The single-file bundle (this is what works — start here)
 
-### Recommended options for INTERNAL-only content, simplest first
+A SharePoint document library stores files but does **not** run a multi-file web
+app: relative links to `css/`, `js/`, and `assets/` break and you get a blank,
+unstyled page. The fix is to serve the app as **one self-contained HTML file**.
 
-1. **SharePoint document library + the "Embed" or "File viewer" web part
-   (recommended, all-Microsoft).**
-   Upload the whole folder to a SharePoint/Teams document library on a site your
-   audience already has access to. Because it lives inside SharePoint, it inherits
-   your org's login — no separate hosting, no public exposure. Then embed it on a
-   page (see the step-by-step below). Updates = re-upload the changed files.
+`build.sh` bundles the entire app — CSS, the data file, all JS, and every SVG
+(embedded as base64) — into a single `dist/index.html` with **no external
+references**. That one file renders correctly when uploaded to SharePoint.
 
-2. **Internal web server / intranet host over HTTPS.**
-   If IT runs an internal site that serves static files (reachable only on the
-   corporate network/VPN), drop the folder there and embed that URL. Also private,
-   slightly more setup.
+**Build it (re-run whenever you change the diagram or the data):**
 
-3. **Azure Static Web Apps / Blob static hosting with access restricted to your
-   tenant.** More moving parts; only worth it if IT already uses Azure and wants
-   central hosting with Entra ID (Azure AD) sign-in in front of it.
+```
+bash build.sh                 # bundles data/norcomm.js -> dist/index.html
+bash build.sh data/other.js   # bundle a different center
+```
 
-> **Not recommended for this content: GitHub Pages.** A Pages site is **publicly
-> reachable by anyone with the URL**, even when published from a *private* repo
-> (the only exception is GitHub Enterprise Cloud's private Pages). Because this
-> research is internal, the auto-deploy workflow in this repo has been
-> **intentionally disabled** — see `.github/workflows/deploy-pages.yml`. Leave it
-> off unless this content is ever formally cleared for public hosting.
+> The pre-built `dist/index.html` is committed to this repo, so if you haven't
+> changed anything you can upload it directly without re-running the build.
 
-### Step-by-step: embed in SharePoint (Microsoft-only path)
+**Verify before uploading:** double-click `dist/index.html` on your computer and
+confirm the diagram, layers, and detail panels all work. That proves the bundle
+is good independent of SharePoint.
 
-1. Go to the SharePoint site your audience uses. Open (or create) a **document
-   library**, e.g. "Dispatch Research".
-2. **Upload the entire project folder** (drag it in). Keep the folder structure —
-   `index.html` must sit alongside its `css/`, `js/`, `data/`, and `assets/`
-   folders, or the relative links break.
-3. Click `index.html` in the library and confirm it opens/renders in the browser.
+### Step-by-step: embed in SharePoint
+
+1. **Verify locally** — double-click `dist/index.html` and confirm it looks right.
+2. Go to the SharePoint site your audience uses and open (or create) a **document
+   library**, e.g. "Dispatch Research". Upload **just `dist/index.html`** (you can
+   rename it, e.g. `norcomm.html`).
+3. Click the uploaded file in the library and confirm it renders in the browser.
    Copy that page's URL from the address bar.
-   - If SharePoint *downloads* the file instead of showing it, use option 2 below
-     or ask IT to allow rendering — some tenants block inline HTML.
-4. Go to the SharePoint **page** where you want the diagram to appear → **Edit** →
-   click **+** to add a web part → choose **Embed**.
-5. Paste the `index.html` URL. Set a generous height (800px+). **Publish** the page.
+4. Go to the SharePoint **page** where you want the diagram → **Edit** → click **+**
+   to add a web part → choose **Embed**.
+5. Paste the file's URL. Set a generous height (800px+). **Publish** the page.
 6. Open the page as a normal viewer to confirm the diagram shows and the layer
-   toggles work.
+   toggles work. *(Confirmed working — the single-file bundle renders in SharePoint.)*
 
-> If the **Embed** web part refuses the URL, your tenant may only allow embedding
-> from an approved domain list — that's the main question for IT below.
+**Updating later:** re-run `build.sh`, then re-upload the new `dist/index.html`
+over the old one in the library. The embedded page picks up the change.
+
+### If a document library ever stops working
+
+Some tenants tighten security over time and may block inline JavaScript in
+previewed HTML. If a future upload comes up blank, the file trick can't get around
+a script block — you'd need a real internal host. The cleanest Microsoft-native
+option is **Azure Static Web Apps with Entra ID (Azure AD) sign-in** in front of
+it (something IT sets up), then embed that private URL with the same Embed web
+part. An internal intranet web server over HTTPS works too.
+
+> **Not for this content: GitHub Pages.** A Pages site is **publicly reachable by
+> anyone with the URL**, even from a *private* repo (except GitHub Enterprise
+> Cloud's private Pages). Because this research is internal, the auto-deploy
+> workflow in this repo is **intentionally disabled** — see
+> `.github/workflows/deploy-pages.yml`. Leave it off unless this content is ever
+> formally cleared for public hosting.
 
 ### Questions to ask IT / SharePoint admins
 

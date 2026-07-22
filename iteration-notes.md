@@ -17,6 +17,13 @@ _(nothing pending)_
 
 ## Done
 
+### Round 5 — Ready for SharePoint embedding
+- [x] **Confirmed the content is internal/sensitive** → must not go on the public internet. **Disabled the GitHub Pages auto-deploy** (`.github/workflows/deploy-pages.yml`): commented out the `push` trigger so nothing publishes automatically (manual-only, gated behind a warning), because Pages is publicly reachable by URL even from a private repo.
+- [x] **Diagnosed the blank/unstyled SharePoint page:** a document library can't serve a multi-file app — relative links to css/js/assets break.
+- [x] **Added `build.sh`** — bundles CSS + data + all JS + every SVG (base64) into one self-contained `dist/index.html` with zero external references. Pure bash (no Node/Python). `diagram.js` gained `assetSrc()` which uses the inlined `window.ASSET_MAP` when present, else falls back to `assets/<hash>.svg` (double-click workflow unchanged).
+- [x] **✅ CONFIRMED WORKING:** the single-file `dist/index.html` renders correctly when uploaded to SharePoint and embedded via the Embed web part.
+- [x] **Updated README**: publishing section now leads with the proven single-file path + step-by-step SharePoint embed; "add another center" now includes the `bash build.sh data/<center>.js` publish step; Azure Static Web Apps documented as the fallback if a tenant ever blocks inline JS.
+
 ### Round 4 — Real Figma sync + replicable components
 Figma Dev Mode MCP is now connected, so the design was read directly (node `1:8`).
 - [x] **Downloaded the 11 authentic connector SVGs** that earlier rounds couldn't access, straight from the Dev Mode server. All 36 Figma vectors now exist locally.
