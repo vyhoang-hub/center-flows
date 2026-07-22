@@ -155,7 +155,7 @@ var Diagram = {
       el.style.width = c.w + "px";
       el.style.height = c.h + "px";
       var img = document.createElement("img");
-      img.src = "assets/" + c.asset + ".svg";
+      img.src = assetSrc(c.asset);
       img.alt = "";
       el.appendChild(img);
       stage.appendChild(el);
@@ -197,6 +197,16 @@ var Diagram = {
     });
   },
 };
+
+/* Resolve a connector asset to an <img> src.
+   - Normal (multi-file) use: point at the file in /assets, exactly as before.
+   - Bundled single-file build: build.sh injects window.ASSET_MAP, a
+     { hash: "data:image/svg+xml;..." } lookup, so the SVGs travel inside the
+     one HTML file and no separate /assets requests are made. */
+function assetSrc(hash) {
+  if (window.ASSET_MAP && window.ASSET_MAP[hash]) return window.ASSET_MAP[hash];
+  return "assets/" + hash + ".svg";
+}
 
 /* Escape text before injecting as HTML. */
 function esc(s) {
