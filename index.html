@@ -8,6 +8,10 @@
   <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
+  <!-- Static build stamp (no JS needed, so it shows even if scripts are blocked
+       or a stale copy is cached). Bump BUILD in build.sh on each rebuild. -->
+  <div id="buildStamp" style="position:fixed;top:2px;right:6px;z-index:99999;
+       font:10px monospace;color:#c7c0b8;pointer-events:none;">build __BUILD__</div>
   <div class="app">
     <!-- Header -->
     <header class="app-header">
