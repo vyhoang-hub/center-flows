@@ -77,6 +77,7 @@ echo "  inlined $count SVG asset(s)"
     inbody                      { print }
   ' index.html
   echo '  <script>'
+  [ -f js/diag.js ] && { cat js/diag.js; echo ''; }   # TEMP diagnostics (first)
   cat "$ASSET_JS"        # window.ASSET_MAP (inlined SVGs) — must come first
   echo ''
   cat "$DATA_FILE"       # window.DISPATCH_CENTER

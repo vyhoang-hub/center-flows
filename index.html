@@ -70,6 +70,9 @@
   <!-- Load order matters: data first, then renderers, then the app wiring.
        Plain <script> tags (no modules) so it works from a double-clicked file. -->
   <!-- To show a different dispatch center, point this line at another data file. -->
+  <!-- TEMP diagnostics (first, to catch errors from the others). Remove once
+       the SharePoint embed issue is resolved. -->
+  <script src="js/diag.js"></script>
   <script src="data/norcomm.js"></script>
   <script src="js/diagram.js"></script>
   <script src="js/panels.js"></script>
