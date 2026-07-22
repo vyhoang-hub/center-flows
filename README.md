@@ -145,6 +145,35 @@ scripts for security.
 3. **Direct script embedding — not recommended.** Modern SharePoint Online blocks
    custom scripts on most pages by design. Avoid.
 
+### Deploying via GitHub Pages (this repo's setup)
+
+This repo ships a GitHub Actions workflow at
+`.github/workflows/deploy-pages.yml` that **auto-deploys the site to GitHub
+Pages on every push to `main`**. There is no build step — it uploads the repo
+root (where `index.html` lives) as a static artifact and publishes it.
+
+**One-time activation:** in the repo, go to **Settings → Pages → Build and
+deployment** and set **Source** to **GitHub Actions** (not "Deploy from a
+branch"). After that, every push to `main` publishes automatically; you can also
+trigger a deploy manually from the **Actions** tab → **Deploy to GitHub Pages**
+→ **Run workflow**. The published URL is:
+
+```
+https://vyhoang-hub.github.io/center-flows/
+```
+
+> ⚠️ **Private-repo caveats — read before relying on this:**
+> - **Plan requirement.** Publishing Pages from a **private** repo requires
+>   GitHub **Pro / Team / Enterprise**. On a free plan the Actions run fails at
+>   the deploy step. Either upgrade or make the repo public.
+> - **Public exposure.** Unless the org is on **GitHub Enterprise Cloud**, a
+>   Pages site published from a private repo is still **publicly reachable by
+>   anyone with the URL** — it is not access-controlled. This is exactly what
+>   lets the SharePoint Embed web part (which loads the URL anonymously) render
+>   it, but it also means anything published here is on the public internet. If
+>   the dispatch-center research is sensitive, host the embed on an internal
+>   HTTPS location instead of Pages (see option 1 above).
+
 ### Questions to ask IT / SharePoint admins
 
 - Is the **Embed web part** enabled, and is embedding from *(your host URL)* on the
