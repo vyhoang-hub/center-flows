@@ -1,22 +1,21 @@
 name: Deploy to GitHub Pages
 
-# Deploys the static site (repo root) to GitHub Pages.
+# Deploys the static site (repo root) to GitHub Pages on every push to main.
 # No build step — the site is plain HTML/CSS/JS, so we just upload the files.
 #
-# ⚠️ AUTO-DEPLOY IS DISABLED ON PURPOSE.
+# ⚠️ PUBLIC EXPOSURE — DELIBERATE CHOICE (2026-07-22).
 # GitHub Pages is PUBLICLY reachable by URL, even from a private repo (unless the
-# org is on GitHub Enterprise Cloud with private Pages). The dispatch-center
-# research is INTERNAL/SENSITIVE, so we must NOT publish it to the open web.
-# The `push` trigger below is commented out so nothing publishes automatically.
-# This workflow can only be started by a deliberate manual click in the Actions
-# tab — and even then, only do so if this content has been cleared for public
-# hosting. For internal embedding, host the files somewhere org-only instead
-# (see the "Publishing" section of README.md).
+# org is on GitHub Enterprise Cloud with private Pages). SharePoint's file
+# preview / embed sandbox blocks the JavaScript this app needs, so the owner
+# chose to host on GitHub Pages and embed that public URL into SharePoint,
+# accepting that anyone with the link can view it. If this content is ever
+# reclassified as not-for-public, re-disable this trigger and move to a private
+# host (e.g. Azure Static Web Apps with sign-in) — see README.md.
 
 on:
-  # push:                 # <-- intentionally disabled; see note above
-  #   branches: [main]
-  # Manual-only: nothing deploys unless a person clicks "Run workflow".
+  push:
+    branches: [main]
+  # Also allow manual runs from the Actions tab.
   workflow_dispatch:
 
 # Grant the token the permissions Pages deployment needs.

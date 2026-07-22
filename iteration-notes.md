@@ -17,6 +17,13 @@ _(nothing pending)_
 
 ## Done
 
+### Round 10 — Root cause found: SharePoint sandbox blocks JS → moving to GitHub Pages
+- [x] **Mystery solved.** The diagram was NEVER broken. Direct-open of the file in SharePoint renders the full diagram + diagnostics (`data: images: ALLOWED`, 60 stage children). But SharePoint's **file preview and the Share→"Copy embed code" both use `_layouts/15/embed.aspx`, a sandbox that turns JavaScript OFF** — so the shell shows but the diagram (drawn by JS) stays blank. The File viewer web part does the same. That's a Microsoft security design, not a code bug — which is why none of Rounds 6–9's code fixes changed the embed outcome.
+- [x] **Decision (2026-07-22):** owner accepts public hosting. SharePoint can't run the app's JS in an embed, so host on **GitHub Pages** (serves real HTML, JS runs) and embed that public URL. ⚠️ Pages is publicly reachable by URL even from a private repo — accepted trade-off; revisit if content is reclassified.
+- [x] **Re-enabled** `.github/workflows/deploy-pages.yml` (push trigger on `main`) with an updated deliberate-choice notice.
+- [x] **Removed the temporary diagnostics** (`js/diag.js`, build stamp) now that the cause is known; rebuilt a clean `dist/index.html`.
+- [ ] **ACTION FOR USER:** one-time — turn Pages on (Settings → Pages → Source: GitHub Actions), then embed the published URL in SharePoint via the Embed web part.
+
 ### Round 9 — Fix diagram off-screen in SharePoint iframe
 - [x] **Symptom:** in SharePoint everything rendered (legend + controls) EXCEPT the diagram; locally it was fine. So JS runs in the iframe — not a script-block issue.
 - [x] **Cause:** `fit()` ran at first render when the iframe canvas still had **0 width/height**. The old math (`(0-48)/2002` → negative → guard reset scale to 1, then `tx=-1001, ty=-651`) pushed the stage ~1000px off-screen. The panel (separate grid column) and controls (pinned to canvas corner) stayed visible, so only the diagram looked missing.

@@ -26,12 +26,7 @@ OUT="$OUT_DIR/index.html"
 [ -f "$DATA_FILE" ] || { echo "ERROR: data file not found: $DATA_FILE" >&2; exit 1; }
 mkdir -p "$OUT_DIR"
 
-# A visible build id so we can tell which version SharePoint is actually serving
-# (cache busting / stale-copy diagnosis). Derived from the git commit count +
-# short hash — deterministic, no timestamp calls needed.
-BUILD_ID="$( { git rev-list --count HEAD 2>/dev/null || echo 0; }  )-$( { git rev-parse --short HEAD 2>/dev/null || echo local; } )"
-
-echo "Bundling '$DATA_FILE' -> $OUT   (build $BUILD_ID)"
+echo "Bundling '$DATA_FILE' -> $OUT"
 
 # --- 1. Build window.ASSET_MAP from every .svg the data file references -------
 # Each SVG becomes a base64 data: URI so it lives inside the HTML.
@@ -80,9 +75,8 @@ echo "  inlined $count SVG asset(s)"
     /<body>/                    { inbody=1; next }
     inbody && /^[[:space:]]*<script/ { exit }
     inbody                      { print }
-  ' index.html | sed "s/__BUILD__/$BUILD_ID/g"
+  ' index.html
   echo '  <script>'
-  [ -f js/diag.js ] && { cat js/diag.js; echo ''; }   # TEMP diagnostics (first)
   cat "$ASSET_JS"        # window.ASSET_MAP (inlined SVGs) — must come first
   echo ''
   cat "$DATA_FILE"       # window.DISPATCH_CENTER
