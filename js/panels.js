@@ -87,7 +87,7 @@ var Panels = {
 var Detail = {
   open: function (node) {
     var el = document.getElementById("detail");
-    el.dataset.color = node.color || "neutral";
+    el.dataset.cat = node.category || "neutral";
     var d = node.detail || {};
 
     var head = document.getElementById("detailHead");
