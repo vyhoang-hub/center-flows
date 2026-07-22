@@ -67,10 +67,14 @@ echo "  inlined $count SVG asset(s)"
   # and the first <script>), so the bundle NEVER drifts from the real page.
   # We drop index.html's <script src=...> tags because the bundle inlines all JS
   # right below instead.
+  # Anchor the stop pattern to a <script tag at the START of a line. index.html's
+  # load-order comment mentions the word "<script>" in prose, so an unanchored
+  # match would stop mid-comment and emit an UNCLOSED <!-- --> that swallows all
+  # the inlined JS (blank page). ^[[:space:]]*<script only matches real tags.
   awk '
-    /<body>/     { inbody=1; next }
-    inbody && /<script/ { exit }   # stop at the external <script> tags
-    inbody       { print }
+    /<body>/                    { inbody=1; next }
+    inbody && /^[[:space:]]*<script/ { exit }
+    inbody                      { print }
   ' index.html
   echo '  <script>'
   cat "$ASSET_JS"        # window.ASSET_MAP (inlined SVGs) — must come first

@@ -17,6 +17,10 @@ _(nothing pending)_
 
 ## Done
 
+### Round 8 — Fix blank bundle (unclosed HTML comment)
+- [x] **Bug:** after Round 7's bundler change, `dist/index.html` rendered blank (diagram + legend gone). Cause: the awk that extracts the `<body>` stopped at the first line matching `<script` — but `index.html`'s load-order **comment** contains the prose "`<script>` tags", so extraction stopped *mid-comment*, emitting an **unclosed `<!-- -->`** that swallowed all the inlined JS. Nothing executed → blank page.
+- [x] **Fix:** anchored the stop pattern to `^[[:space:]]*<script` (a real tag at line start), so prose mentions of "script" inside comments are ignored. Verified: comments balanced (9/9), all critical JS lives after `<script>` opens, zero external refs. _(build.sh)_
+
 ### Round 7 — Clearer, labeled controls (+ bundler bug fix)
 - [x] **Found why the Round 6 buttons weren't visible:** `build.sh` had the page `<body>` **hardcoded as a stale copy**, so the bundle never included the zoom/collapse buttons (wheel-zoom + drag worked because those are in the JS). Fixed the bundler to **extract the body straight from `index.html`** via awk, so it can never drift again.
 - [x] **Turned the icon-only controls into a labeled toolbar** — "Zoom in", "Zoom out", "Fit", "Fullscreen" now show icon **and** text, and are bigger. _(index.html, css/app.css `.ctrl-btn`/`.ctrl-lbl`)_
