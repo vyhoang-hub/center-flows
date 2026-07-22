@@ -17,6 +17,11 @@ _(nothing pending)_
 
 ## Done
 
+### Round 9 — Fix diagram off-screen in SharePoint iframe
+- [x] **Symptom:** in SharePoint everything rendered (legend + controls) EXCEPT the diagram; locally it was fine. So JS runs in the iframe — not a script-block issue.
+- [x] **Cause:** `fit()` ran at first render when the iframe canvas still had **0 width/height**. The old math (`(0-48)/2002` → negative → guard reset scale to 1, then `tx=-1001, ty=-651`) pushed the stage ~1000px off-screen. The panel (separate grid column) and controls (pinned to canvas corner) stayed visible, so only the diagram looked missing.
+- [x] **Fix:** `fit()` now **bails without touching the transform** if the canvas isn't sized yet; a **ResizeObserver** re-fits once the element gets real dimensions, plus a `window load` re-fit. Robust to iframe timing. _(js/diagram.js)_
+
 ### Round 8 — Fix blank bundle (unclosed HTML comment)
 - [x] **Bug:** after Round 7's bundler change, `dist/index.html` rendered blank (diagram + legend gone). Cause: the awk that extracts the `<body>` stopped at the first line matching `<script` — but `index.html`'s load-order **comment** contains the prose "`<script>` tags", so extraction stopped *mid-comment*, emitting an **unclosed `<!-- -->`** that swallowed all the inlined JS. Nothing executed → blank page.
 - [x] **Fix:** anchored the stop pattern to `^[[:space:]]*<script` (a real tag at line start), so prose mentions of "script" inside comments are ignored. Verified: comments balanced (9/9), all critical JS lives after `<script>` opens, zero external refs. _(build.sh)_

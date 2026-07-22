@@ -40,6 +40,19 @@ var Diagram = {
     this._initInteractions();
     this.fit();
     window.addEventListener("resize", function () { Diagram.fit(); });
+
+    // In an embedded iframe (e.g. SharePoint) the canvas often has 0 size at
+    // first render, so the initial fit() can't compute a real scale. Re-fit
+    // once the element actually gets a size, and again after full load, so the
+    // diagram doesn't end up scaled/positioned off-screen.
+    var wrap = document.getElementById("canvasWrap");
+    if (wrap && typeof ResizeObserver !== "undefined") {
+      var ro = new ResizeObserver(function () {
+        if (wrap.clientWidth > 0 && wrap.clientHeight > 0) Diagram.fit();
+      });
+      ro.observe(wrap);
+    }
+    window.addEventListener("load", function () { Diagram.fit(); });
   },
 
   /* Write the current scale + pan to the stage as a single transform. */
@@ -55,15 +68,18 @@ var Diagram = {
   fit: function () {
     var wrap = document.getElementById("canvasWrap");
     if (!wrap) return;
+    var cw = wrap.clientWidth, ch = wrap.clientHeight;
+    // Canvas not sized yet (common in a freshly-loaded iframe). Bail without
+    // touching the transform — the ResizeObserver will call fit() again once
+    // the element has real dimensions, avoiding an off-screen placement.
     var pad = 24;
-    var sx = (wrap.clientWidth - pad * 2) / STAGE_W;
-    var sy = (wrap.clientHeight - pad * 2) / STAGE_H;
-    var s = Math.min(sx, sy);
-    if (!isFinite(s) || s <= 0) s = 1;
+    if (cw <= pad * 2 || ch <= pad * 2) return;
+    var s = Math.min((cw - pad * 2) / STAGE_W, (ch - pad * 2) / STAGE_H);
+    if (!isFinite(s) || s <= 0) return;
     this.scale = Math.max(this.minScale, Math.min(this.maxScale, s));
     // Center the scaled stage in the viewport.
-    this.tx = (wrap.clientWidth - STAGE_W * this.scale) / 2;
-    this.ty = (wrap.clientHeight - STAGE_H * this.scale) / 2;
+    this.tx = (cw - STAGE_W * this.scale) / 2;
+    this.ty = (ch - STAGE_H * this.scale) / 2;
     this._apply();
   },
 
