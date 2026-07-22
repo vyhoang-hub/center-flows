@@ -1,12 +1,22 @@
 name: Deploy to GitHub Pages
 
-# Deploys the static site (repo root) to GitHub Pages on every push to main.
+# Deploys the static site (repo root) to GitHub Pages.
 # No build step — the site is plain HTML/CSS/JS, so we just upload the files.
+#
+# ⚠️ AUTO-DEPLOY IS DISABLED ON PURPOSE.
+# GitHub Pages is PUBLICLY reachable by URL, even from a private repo (unless the
+# org is on GitHub Enterprise Cloud with private Pages). The dispatch-center
+# research is INTERNAL/SENSITIVE, so we must NOT publish it to the open web.
+# The `push` trigger below is commented out so nothing publishes automatically.
+# This workflow can only be started by a deliberate manual click in the Actions
+# tab — and even then, only do so if this content has been cleared for public
+# hosting. For internal embedding, host the files somewhere org-only instead
+# (see the "Publishing" section of README.md).
 
 on:
-  push:
-    branches: [main]
-  # Allow manual runs from the Actions tab.
+  # push:                 # <-- intentionally disabled; see note above
+  #   branches: [main]
+  # Manual-only: nothing deploys unless a person clicks "Run workflow".
   workflow_dispatch:
 
 # Grant the token the permissions Pages deployment needs.

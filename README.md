@@ -121,58 +121,61 @@ in `css/theme.css` to restyle.
 
 ---
 
-## Publishing to SharePoint — recommendation
+## Publishing / embedding — recommendation
 
-**Short version:** host these static files somewhere your org can reach, then embed
-the page into SharePoint with the **Embed web part** (an `<iframe>`). Do **not**
-try to paste the HTML/JS directly into a SharePoint page — modern SharePoint strips
-scripts for security.
+**This content is internal/sensitive, so it must NOT go on the public internet.**
+That single fact drives every choice below.
 
-### Realistic options, simplest first
+**Short version:** host these static files somewhere **only your organization can
+reach** (behind your normal Microsoft 365 / SSO login), then embed the page into
+SharePoint with the **Embed web part** (an `<iframe>`) pointed at that internal
+URL. Do **not** paste the HTML/JS directly into a SharePoint page — modern
+SharePoint strips scripts for security.
 
-1. **Host the folder + embed via iframe (recommended).**
-   Put these files anywhere that serves static files over HTTPS on your network:
-   a SharePoint document library's file, an internal web server, Azure Static Web
-   Apps / Blob static hosting, or GitHub Pages if allowed. Then on a SharePoint
-   page add **Embed** web part → paste the URL. Low friction, updates by replacing
-   the files.
+### Recommended options for INTERNAL-only content, simplest first
 
-2. **Upload to a SharePoint document library and link to `index.html`.**
-   Sometimes works for opening directly, but SharePoint may download the file
-   instead of rendering it, and relative script paths can break. Test before
-   relying on it.
+1. **SharePoint document library + the "Embed" or "File viewer" web part
+   (recommended, all-Microsoft).**
+   Upload the whole folder to a SharePoint/Teams document library on a site your
+   audience already has access to. Because it lives inside SharePoint, it inherits
+   your org's login — no separate hosting, no public exposure. Then embed it on a
+   page (see the step-by-step below). Updates = re-upload the changed files.
 
-3. **Direct script embedding — not recommended.** Modern SharePoint Online blocks
-   custom scripts on most pages by design. Avoid.
+2. **Internal web server / intranet host over HTTPS.**
+   If IT runs an internal site that serves static files (reachable only on the
+   corporate network/VPN), drop the folder there and embed that URL. Also private,
+   slightly more setup.
 
-### Deploying via GitHub Pages (this repo's setup)
+3. **Azure Static Web Apps / Blob static hosting with access restricted to your
+   tenant.** More moving parts; only worth it if IT already uses Azure and wants
+   central hosting with Entra ID (Azure AD) sign-in in front of it.
 
-This repo ships a GitHub Actions workflow at
-`.github/workflows/deploy-pages.yml` that **auto-deploys the site to GitHub
-Pages on every push to `main`**. There is no build step — it uploads the repo
-root (where `index.html` lives) as a static artifact and publishes it.
+> **Not recommended for this content: GitHub Pages.** A Pages site is **publicly
+> reachable by anyone with the URL**, even when published from a *private* repo
+> (the only exception is GitHub Enterprise Cloud's private Pages). Because this
+> research is internal, the auto-deploy workflow in this repo has been
+> **intentionally disabled** — see `.github/workflows/deploy-pages.yml`. Leave it
+> off unless this content is ever formally cleared for public hosting.
 
-**One-time activation:** in the repo, go to **Settings → Pages → Build and
-deployment** and set **Source** to **GitHub Actions** (not "Deploy from a
-branch"). After that, every push to `main` publishes automatically; you can also
-trigger a deploy manually from the **Actions** tab → **Deploy to GitHub Pages**
-→ **Run workflow**. The published URL is:
+### Step-by-step: embed in SharePoint (Microsoft-only path)
 
-```
-https://vyhoang-hub.github.io/center-flows/
-```
+1. Go to the SharePoint site your audience uses. Open (or create) a **document
+   library**, e.g. "Dispatch Research".
+2. **Upload the entire project folder** (drag it in). Keep the folder structure —
+   `index.html` must sit alongside its `css/`, `js/`, `data/`, and `assets/`
+   folders, or the relative links break.
+3. Click `index.html` in the library and confirm it opens/renders in the browser.
+   Copy that page's URL from the address bar.
+   - If SharePoint *downloads* the file instead of showing it, use option 2 below
+     or ask IT to allow rendering — some tenants block inline HTML.
+4. Go to the SharePoint **page** where you want the diagram to appear → **Edit** →
+   click **+** to add a web part → choose **Embed**.
+5. Paste the `index.html` URL. Set a generous height (800px+). **Publish** the page.
+6. Open the page as a normal viewer to confirm the diagram shows and the layer
+   toggles work.
 
-> ⚠️ **Private-repo caveats — read before relying on this:**
-> - **Plan requirement.** Publishing Pages from a **private** repo requires
->   GitHub **Pro / Team / Enterprise**. On a free plan the Actions run fails at
->   the deploy step. Either upgrade or make the repo public.
-> - **Public exposure.** Unless the org is on **GitHub Enterprise Cloud**, a
->   Pages site published from a private repo is still **publicly reachable by
->   anyone with the URL** — it is not access-controlled. This is exactly what
->   lets the SharePoint Embed web part (which loads the URL anonymously) render
->   it, but it also means anything published here is on the public internet. If
->   the dispatch-center research is sensitive, host the embed on an internal
->   HTTPS location instead of Pages (see option 1 above).
+> If the **Embed** web part refuses the URL, your tenant may only allow embedding
+> from an approved domain list — that's the main question for IT below.
 
 ### Questions to ask IT / SharePoint admins
 
