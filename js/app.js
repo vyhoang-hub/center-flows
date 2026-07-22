@@ -32,6 +32,24 @@
   Panels.initLayers(data, applyVisibility);
   applyVisibility();
 
+  // --- Zoom / pan / fullscreen controls -------------------------------------
+  byId("zoomIn").addEventListener("click", function () { Diagram.zoomAt(1.25); });
+  byId("zoomOut").addEventListener("click", function () { Diagram.zoomAt(1 / 1.25); });
+  byId("zoomFit").addEventListener("click", function () { Diagram.fit(); });
+  byId("fullscreen").addEventListener("click", toggleFullscreen);
+
+  // Keep the "Fit" view sensible when entering/leaving fullscreen.
+  document.addEventListener("fullscreenchange", function () {
+    var on = !!document.fullscreenElement;
+    document.body.classList.toggle("is-fullscreen", on);
+    // Let the layout settle, then refit.
+    setTimeout(function () { Diagram.fit(); }, 60);
+  });
+
+  // --- Collapsible layers panel ---------------------------------------------
+  byId("panelCollapse").addEventListener("click", function () { setPanel(false); });
+  byId("layersReopen").addEventListener("click", function () { setPanel(true); });
+
   // Close detail panel on Escape.
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") Detail.close();
@@ -46,5 +64,26 @@
     // Staff annotation card
     var staff = document.getElementById("staffCard");
     if (staff) staff.style.display = Panels.isVisible(staff.dataset.layers) ? "" : "none";
+  }
+
+  function byId(id) { return document.getElementById(id); }
+
+  /* Collapse/expand the right-hand Layers panel. When collapsed, the diagram
+     takes the full width and a small "Layers" tab appears to bring it back. */
+  function setPanel(open) {
+    document.body.classList.toggle("panel-collapsed", !open);
+    // The canvas changed width, so refit after the layout updates.
+    setTimeout(function () { Diagram.fit(); }, 60);
+  }
+
+  /* Fullscreen the whole app — the biggest readability win inside a small
+     SharePoint embed. Falls back silently if the browser blocks it. */
+  function toggleFullscreen() {
+    var el = document.querySelector(".app");
+    if (!document.fullscreenElement) {
+      if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+    }
   }
 })();

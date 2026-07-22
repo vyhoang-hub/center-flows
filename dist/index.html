@@ -95,14 +95,42 @@ html, body {
 
 /* ---- Canvas -------------------------------------------------------------- */
 .canvas-wrap {
-  position: relative; overflow: auto;
+  position: relative; overflow: hidden;   /* pan/zoom replaces scrollbars */
+  touch-action: none;                      /* we handle wheel/drag ourselves */
+  cursor: grab;
   background:
-    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 26px,
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 26px 100%,
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 26px 26px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 26px 26px,
     var(--canvas-bg);
 }
-/* The stage is authored in Figma pixels and scaled to fit. */
-.stage { position: relative; transform-origin: top left; }
+.canvas-wrap.grabbing { cursor: grabbing; }
+/* The stage is authored in Figma pixels; JS pans/zooms it via transform. */
+.stage { position: relative; transform-origin: 0 0; will-change: transform; }
+
+/* ---- Zoom / pan / fullscreen controls ------------------------------------ */
+.canvas-controls {
+  position: absolute; left: 14px; bottom: 14px; z-index: 6;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ctrl-btn {
+  width: 34px; height: 34px; border: 1px solid var(--border);
+  background: var(--panel-bg); color: var(--ink); border-radius: 8px;
+  font-size: 17px; line-height: 1; cursor: pointer; box-shadow: var(--shadow);
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.ctrl-btn:hover { background: var(--neutral-soft); }
+.ctrl-btn:active { transform: translateY(1px); }
+#zoomFit { font-size: 12px; font-weight: 600; }
+
+/* Small tab to reopen the layers panel; only visible when collapsed. */
+.layers-reopen {
+  position: absolute; top: 14px; right: 14px; z-index: 6; display: none;
+  border: 1px solid var(--border); background: var(--panel-bg); color: var(--ink);
+  border-radius: 8px; padding: 7px 12px; font-size: 12.5px; cursor: pointer;
+  box-shadow: var(--shadow); font-family: var(--font);
+}
+.layers-reopen:hover { background: var(--neutral-soft); }
+body.panel-collapsed .layers-reopen { display: block; }
 
 /* Connectors: exact Figma SVGs, positioned absolutely. Behind the nodes. */
 .connector { position: absolute; pointer-events: none; }
@@ -180,10 +208,22 @@ html, body {
   background: var(--panel-bg); border-left: 1px solid var(--border);
   padding: 18px 18px 12px; display: flex; flex-direction: column; overflow-y: auto;
 }
+.layer-panel-head {
+  display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px;
+}
 .layer-panel h2 {
   font-size: 11px; letter-spacing: 1.5px; color: var(--ink-soft);
-  text-transform: uppercase; margin: 0 0 12px;
+  text-transform: uppercase; margin: 0;
 }
+.panel-collapse {
+  border: none; background: none; cursor: pointer; color: var(--ink-soft);
+  font-size: 20px; line-height: 1; padding: 0 2px;
+}
+.panel-collapse:hover { color: var(--ink); }
+
+/* Collapsed: hide the panel entirely so the canvas spans full width. */
+body.panel-collapsed .app-body { grid-template-columns: 1fr; }
+body.panel-collapsed .layer-panel { display: none; }
 .layer-row {
   display: flex; align-items: center; gap: 10px;
   padding: 7px 0; cursor: pointer; user-select: none;
@@ -245,10 +285,17 @@ html, body {
   background: var(--c-soft); color: var(--c); margin: 0 6px 6px 0;
 }
 
+/* ---- Fullscreen ---------------------------------------------------------- */
+/* When .app is the fullscreen element it fills the screen; the existing grid
+   (header + body) already lays out correctly. Just guarantee the background. */
+.app:fullscreen { background: var(--bg); }
+.app:-webkit-full-screen { background: var(--bg); }
+
 /* ---- Responsive ---------------------------------------------------------- */
 @media (max-width: 820px) {
   .app-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
   .layer-panel { border-left: none; border-top: 1px solid var(--border); max-height: 40vh; }
+  body.panel-collapsed .app-body { grid-template-rows: 1fr; }
   .app-header .tags { display: none; }
 }
   </style>
@@ -634,6 +681,13 @@ var Diagram = {
   data: null,
   onNodeClick: null,
 
+  // Pan/zoom state. scale = zoom factor; tx/ty = pan offset in screen px.
+  scale: 1,
+  tx: 0,
+  ty: 0,
+  minScale: 0.1,
+  maxScale: 4,
+
   render: function (data, onNodeClick) {
     this.data = data;
     this.onNodeClick = onNodeClick;
@@ -652,21 +706,90 @@ var Diagram = {
     this._renderNodes(stage, data.nodes || []);
     this._renderPills(stage, data.pills || []);
 
-    this._fit();
-    window.addEventListener("resize", function () { Diagram._fit(); });
+    this._initInteractions();
+    this.fit();
+    window.addEventListener("resize", function () { Diagram.fit(); });
   },
 
-  /* Scale the stage so it fits the width. transform:scale doesn't shrink the
-     layout box, so negative margins pull the scroll area back to size. */
-  _fit: function () {
-    var wrap = document.getElementById("canvasWrap");
+  /* Write the current scale + pan to the stage as a single transform. */
+  _apply: function () {
     var stage = document.getElementById("stage");
-    var scale = (wrap.clientWidth - 40) / STAGE_W;
-    scale = Math.min(scale, 1);
-    if (scale <= 0) return;
-    stage.style.transform = "scale(" + scale + ")";
-    stage.style.marginBottom = (STAGE_H * scale - STAGE_H) + "px";
-    stage.style.marginRight = (STAGE_W * scale - STAGE_W) + "px";
+    stage.style.transformOrigin = "0 0";
+    stage.style.transform =
+      "translate(" + this.tx + "px," + this.ty + "px) scale(" + this.scale + ")";
+  },
+
+  /* Fit the whole diagram inside the canvas and center it. This is the default
+     view and the "Fit" button. */
+  fit: function () {
+    var wrap = document.getElementById("canvasWrap");
+    if (!wrap) return;
+    var pad = 24;
+    var sx = (wrap.clientWidth - pad * 2) / STAGE_W;
+    var sy = (wrap.clientHeight - pad * 2) / STAGE_H;
+    var s = Math.min(sx, sy);
+    if (!isFinite(s) || s <= 0) s = 1;
+    this.scale = Math.max(this.minScale, Math.min(this.maxScale, s));
+    // Center the scaled stage in the viewport.
+    this.tx = (wrap.clientWidth - STAGE_W * this.scale) / 2;
+    this.ty = (wrap.clientHeight - STAGE_H * this.scale) / 2;
+    this._apply();
+  },
+
+  /* Zoom by a factor, keeping the point (cx,cy) — in canvas screen px —
+     fixed under the cursor. Used by the wheel and the +/- buttons. */
+  zoomAt: function (factor, cx, cy) {
+    var wrap = document.getElementById("canvasWrap");
+    if (cx == null) { cx = wrap.clientWidth / 2; cy = wrap.clientHeight / 2; }
+    var newScale = Math.max(this.minScale, Math.min(this.maxScale, this.scale * factor));
+    if (newScale === this.scale) return;
+    // Keep the world point under the cursor stationary.
+    this.tx = cx - (cx - this.tx) * (newScale / this.scale);
+    this.ty = cy - (cy - this.ty) * (newScale / this.scale);
+    this.scale = newScale;
+    this._apply();
+  },
+
+  /* Wire up wheel-zoom and drag-to-pan on the canvas. */
+  _initInteractions: function () {
+    var wrap = document.getElementById("canvasWrap");
+    if (!wrap || wrap._interactive) return;   // guard against double-binding
+    wrap._interactive = true;
+
+    // Wheel = zoom toward the cursor.
+    wrap.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      var rect = wrap.getBoundingClientRect();
+      var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+      var factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      Diagram.zoomAt(factor, cx, cy);
+    }, { passive: false });
+
+    // Drag empty canvas = pan. Dragging starts panning only when the press
+    // didn't land on a node/button (so clicking a node still opens its panel).
+    var panning = false, sx = 0, sy = 0, startTx = 0, startTy = 0, moved = false;
+    wrap.addEventListener("pointerdown", function (e) {
+      if (e.target.closest(".node, .ctrl-btn, .layers-reopen")) return;
+      panning = true; moved = false;
+      sx = e.clientX; sy = e.clientY; startTx = Diagram.tx; startTy = Diagram.ty;
+      wrap.classList.add("grabbing");
+      wrap.setPointerCapture(e.pointerId);
+    });
+    wrap.addEventListener("pointermove", function (e) {
+      if (!panning) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+      Diagram.tx = startTx + dx; Diagram.ty = startTy + dy;
+      Diagram._apply();
+    });
+    function endPan(e) {
+      if (!panning) return;
+      panning = false;
+      wrap.classList.remove("grabbing");
+      try { wrap.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+    wrap.addEventListener("pointerup", endPan);
+    wrap.addEventListener("pointercancel", endPan);
   },
 
   /* Zones — big grouping outlines (e.g. CALL / POLICE / FIRE) drawn from data,
@@ -1004,6 +1127,24 @@ function escText(s) {
   Panels.initLayers(data, applyVisibility);
   applyVisibility();
 
+  // --- Zoom / pan / fullscreen controls -------------------------------------
+  byId("zoomIn").addEventListener("click", function () { Diagram.zoomAt(1.25); });
+  byId("zoomOut").addEventListener("click", function () { Diagram.zoomAt(1 / 1.25); });
+  byId("zoomFit").addEventListener("click", function () { Diagram.fit(); });
+  byId("fullscreen").addEventListener("click", toggleFullscreen);
+
+  // Keep the "Fit" view sensible when entering/leaving fullscreen.
+  document.addEventListener("fullscreenchange", function () {
+    var on = !!document.fullscreenElement;
+    document.body.classList.toggle("is-fullscreen", on);
+    // Let the layout settle, then refit.
+    setTimeout(function () { Diagram.fit(); }, 60);
+  });
+
+  // --- Collapsible layers panel ---------------------------------------------
+  byId("panelCollapse").addEventListener("click", function () { setPanel(false); });
+  byId("layersReopen").addEventListener("click", function () { setPanel(true); });
+
   // Close detail panel on Escape.
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") Detail.close();
@@ -1018,6 +1159,27 @@ function escText(s) {
     // Staff annotation card
     var staff = document.getElementById("staffCard");
     if (staff) staff.style.display = Panels.isVisible(staff.dataset.layers) ? "" : "none";
+  }
+
+  function byId(id) { return document.getElementById(id); }
+
+  /* Collapse/expand the right-hand Layers panel. When collapsed, the diagram
+     takes the full width and a small "Layers" tab appears to bring it back. */
+  function setPanel(open) {
+    document.body.classList.toggle("panel-collapsed", !open);
+    // The canvas changed width, so refit after the layout updates.
+    setTimeout(function () { Diagram.fit(); }, 60);
+  }
+
+  /* Fullscreen the whole app — the biggest readability win inside a small
+     SharePoint embed. Falls back silently if the browser blocks it. */
+  function toggleFullscreen() {
+    var el = document.querySelector(".app");
+    if (!document.fullscreenElement) {
+      if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+    }
   }
 })();
   </script>

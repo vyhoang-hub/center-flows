@@ -20,11 +20,27 @@
     <div class="app-body">
       <div class="canvas-wrap" id="canvasWrap">
         <div class="stage" id="stage"></div>
+
+        <!-- Zoom / pan / fullscreen controls (float over the canvas) -->
+        <div class="canvas-controls" id="canvasControls">
+          <button class="ctrl-btn" id="zoomIn"  aria-label="Zoom in"  title="Zoom in">+</button>
+          <button class="ctrl-btn" id="zoomOut" aria-label="Zoom out" title="Zoom out">&minus;</button>
+          <button class="ctrl-btn" id="zoomFit" aria-label="Fit to screen" title="Fit to screen">Fit</button>
+          <button class="ctrl-btn" id="fullscreen" aria-label="Toggle fullscreen" title="Fullscreen">⛶</button>
+        </div>
+
+        <!-- Reopen tab, shown only when the layer panel is collapsed -->
+        <button class="layers-reopen" id="layersReopen" aria-label="Show layers panel" title="Show layers">
+          ☰ Layers
+        </button>
       </div>
 
       <!-- Layer panel -->
-      <aside class="layer-panel">
-        <h2>Layers</h2>
+      <aside class="layer-panel" id="layerPanel">
+        <div class="layer-panel-head">
+          <h2>Layers</h2>
+          <button class="panel-collapse" id="panelCollapse" aria-label="Hide layers panel" title="Hide panel">&times;</button>
+        </div>
         <div id="layerList"></div>
         <div class="panel-actions">
           <button class="link-btn" id="showAll">Show all</button>

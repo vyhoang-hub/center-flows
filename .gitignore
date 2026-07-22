@@ -10,3 +10,7 @@ node_modules/
 
 # Local Claude Code settings (keep out of the shared repo)
 .claude/settings.local.json
+
+# Reference screenshots dropped in the folder for iteration (not part of the app)
+Screenshot *.png
+_verify_shot.png

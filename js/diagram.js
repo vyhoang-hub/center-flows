@@ -12,6 +12,13 @@ var Diagram = {
   data: null,
   onNodeClick: null,
 
+  // Pan/zoom state. scale = zoom factor; tx/ty = pan offset in screen px.
+  scale: 1,
+  tx: 0,
+  ty: 0,
+  minScale: 0.1,
+  maxScale: 4,
+
   render: function (data, onNodeClick) {
     this.data = data;
     this.onNodeClick = onNodeClick;
@@ -30,21 +37,90 @@ var Diagram = {
     this._renderNodes(stage, data.nodes || []);
     this._renderPills(stage, data.pills || []);
 
-    this._fit();
-    window.addEventListener("resize", function () { Diagram._fit(); });
+    this._initInteractions();
+    this.fit();
+    window.addEventListener("resize", function () { Diagram.fit(); });
   },
 
-  /* Scale the stage so it fits the width. transform:scale doesn't shrink the
-     layout box, so negative margins pull the scroll area back to size. */
-  _fit: function () {
-    var wrap = document.getElementById("canvasWrap");
+  /* Write the current scale + pan to the stage as a single transform. */
+  _apply: function () {
     var stage = document.getElementById("stage");
-    var scale = (wrap.clientWidth - 40) / STAGE_W;
-    scale = Math.min(scale, 1);
-    if (scale <= 0) return;
-    stage.style.transform = "scale(" + scale + ")";
-    stage.style.marginBottom = (STAGE_H * scale - STAGE_H) + "px";
-    stage.style.marginRight = (STAGE_W * scale - STAGE_W) + "px";
+    stage.style.transformOrigin = "0 0";
+    stage.style.transform =
+      "translate(" + this.tx + "px," + this.ty + "px) scale(" + this.scale + ")";
+  },
+
+  /* Fit the whole diagram inside the canvas and center it. This is the default
+     view and the "Fit" button. */
+  fit: function () {
+    var wrap = document.getElementById("canvasWrap");
+    if (!wrap) return;
+    var pad = 24;
+    var sx = (wrap.clientWidth - pad * 2) / STAGE_W;
+    var sy = (wrap.clientHeight - pad * 2) / STAGE_H;
+    var s = Math.min(sx, sy);
+    if (!isFinite(s) || s <= 0) s = 1;
+    this.scale = Math.max(this.minScale, Math.min(this.maxScale, s));
+    // Center the scaled stage in the viewport.
+    this.tx = (wrap.clientWidth - STAGE_W * this.scale) / 2;
+    this.ty = (wrap.clientHeight - STAGE_H * this.scale) / 2;
+    this._apply();
+  },
+
+  /* Zoom by a factor, keeping the point (cx,cy) — in canvas screen px —
+     fixed under the cursor. Used by the wheel and the +/- buttons. */
+  zoomAt: function (factor, cx, cy) {
+    var wrap = document.getElementById("canvasWrap");
+    if (cx == null) { cx = wrap.clientWidth / 2; cy = wrap.clientHeight / 2; }
+    var newScale = Math.max(this.minScale, Math.min(this.maxScale, this.scale * factor));
+    if (newScale === this.scale) return;
+    // Keep the world point under the cursor stationary.
+    this.tx = cx - (cx - this.tx) * (newScale / this.scale);
+    this.ty = cy - (cy - this.ty) * (newScale / this.scale);
+    this.scale = newScale;
+    this._apply();
+  },
+
+  /* Wire up wheel-zoom and drag-to-pan on the canvas. */
+  _initInteractions: function () {
+    var wrap = document.getElementById("canvasWrap");
+    if (!wrap || wrap._interactive) return;   // guard against double-binding
+    wrap._interactive = true;
+
+    // Wheel = zoom toward the cursor.
+    wrap.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      var rect = wrap.getBoundingClientRect();
+      var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+      var factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      Diagram.zoomAt(factor, cx, cy);
+    }, { passive: false });
+
+    // Drag empty canvas = pan. Dragging starts panning only when the press
+    // didn't land on a node/button (so clicking a node still opens its panel).
+    var panning = false, sx = 0, sy = 0, startTx = 0, startTy = 0, moved = false;
+    wrap.addEventListener("pointerdown", function (e) {
+      if (e.target.closest(".node, .ctrl-btn, .layers-reopen")) return;
+      panning = true; moved = false;
+      sx = e.clientX; sy = e.clientY; startTx = Diagram.tx; startTy = Diagram.ty;
+      wrap.classList.add("grabbing");
+      wrap.setPointerCapture(e.pointerId);
+    });
+    wrap.addEventListener("pointermove", function (e) {
+      if (!panning) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+      Diagram.tx = startTx + dx; Diagram.ty = startTy + dy;
+      Diagram._apply();
+    });
+    function endPan(e) {
+      if (!panning) return;
+      panning = false;
+      wrap.classList.remove("grabbing");
+      try { wrap.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+    wrap.addEventListener("pointerup", endPan);
+    wrap.addEventListener("pointercancel", endPan);
   },
 
   /* Zones — big grouping outlines (e.g. CALL / POLICE / FIRE) drawn from data,

@@ -17,6 +17,16 @@ _(nothing pending)_
 
 ## Done
 
+### Round 6 — Readability in the SharePoint embed (zoom / pan / collapse / fullscreen)
+Problem (from the uploaded screenshot): embedded in SharePoint, the whole diagram was scaled down to fit the panel, so text was unreadable and there was a horizontal scrollbar.
+- [x] **Zoom + pan** — mouse-wheel zoom toward the cursor, drag-to-pan the canvas, and floating **+ / − / Fit** buttons (bottom-left). Clicking a node still opens its detail panel (drag only pans on empty canvas). _(js/diagram.js: new scale/tx/ty transform model replacing the old fit-only scaling; js/app.js wiring; css/app.css `.canvas-controls`)_
+- [x] **Fullscreen button** (⛶) — the biggest readability win inside a small embed; expands the app to the whole screen and refits. _(js/app.js `toggleFullscreen`, `fullscreenchange` refit)_
+- [x] **Collapsible Layers panel** — an × in the panel header hides it so the diagram spans full width; a small "☰ Layers" tab (top-right) brings it back. _(index.html, css/app.css `body.panel-collapsed`)_
+- [x] **Bigger diagram / expand all the way** — replaced the "cap at 100%, shrink-to-fit" logic with fit-to-viewport + free zoom (up to 4×), so it can be enlarged as much as needed rather than being locked small.
+- [x] Rebuilt `dist/index.html` (all features confirmed inlined, zero external refs).
+
+> 📌 To publish: open `dist/index.html` locally to confirm it looks right, then re-upload it over the old file in the SharePoint library.
+
 ### Round 5 — Ready for SharePoint embedding
 - [x] **Confirmed the content is internal/sensitive** → must not go on the public internet. **Disabled the GitHub Pages auto-deploy** (`.github/workflows/deploy-pages.yml`): commented out the `push` trigger so nothing publishes automatically (manual-only, gated behind a warning), because Pages is publicly reachable by URL even from a private repo.
 - [x] **Diagnosed the blank/unstyled SharePoint page:** a document library can't serve a multi-file app — relative links to css/js/assets break.
