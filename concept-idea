@@ -1,0 +1,214 @@
+I want to build an interactive dispatch center workflow visualization using an existing Figma wireframe as the starting point.
+
+We will be doing this through the Figma MCP. I will paste or provide the Figma wireframe/component/design reference, and I want you to use that as the visual and layout source of truth.
+
+The goal is to create a reusable, interactive flow model that helps internal teams understand how different dispatch centers handle calls, dispatching, communication, systems, and role responsibilities. This first version should be based on one dispatch center workflow, but the structure should be easy to duplicate and update for future dispatch centers we visit.
+
+Please help me build this as a front-end prototype.
+
+Core goals:
+
+* Use the Figma wireframe as the visual foundation.
+* Convert the Figma wireframe into an interactive front-end experience.
+* Users should be able to show and hide different layers of information.
+* Users should be able to click into roles, steps, or workflow areas to see more detail.
+* The workflow should be easy to replicate for future dispatch centers by editing structured data, not rebuilding the UI.
+* The final output should be easy to host or embed in a way that could work with SharePoint.
+* I want a frictionless workflow for updating and publishing these diagrams over time.
+
+Important context:
+This is for internal UX research documentation. The people using this will likely be product managers, designers, developers, and leadership. They may come to the research hub looking for specific dispatch center visits, role breakdowns, personas, journey maps, user flows, operational differences, and findings they can use in their own work.
+
+This should be designed as a reusable system, not a one-off static diagram.
+
+Figma MCP expectations:
+
+* First, inspect the Figma frame/component that I provide.
+* Identify the major sections, nodes, arrows, containers, role cards, labels, and visual hierarchy.
+* Preserve the overall layout and intent of the Figma wireframe as closely as possible.
+* Translate the wireframe into clean React components.
+* Do not hard-code all text and sections directly into the components unless absolutely necessary.
+* Separate visual structure from dispatch-center-specific content.
+* If the Figma design has grouped sections, use those groupings to inform the component structure.
+* If any parts of the Figma file are ambiguous, make a reasonable implementation decision and briefly explain it.
+
+First workflow to model:
+
+1. Call comes in
+
+* Could be 911 or non-emergency.
+
+2. Call taker receives the call
+
+* The call can go to a 911 call taker or a non-emergency call taker.
+* Non-emergency call takers sometimes take 911 calls if it is busy.
+
+3. Information is entered into CAD
+
+* The call taker enters information into the CAD system.
+* CAD is used for record-keeping and dispatching.
+* Call takers and dispatchers communicate through CAD.
+
+4. Incident is categorized
+
+* If it is fire- or medical-related, it goes to fire dispatch.
+* If it is police-related, it goes to police dispatch.
+
+5. Fire dispatch workflow
+   There are two distinct fire dispatching roles:
+
+Pitch:
+
+* Assesses the incident.
+* Uses CAD to determine which units to send.
+* Attaches units to the incident.
+* Selects the radio channel that will be used for the incident.
+
+Receive:
+
+* Takes the incident from the Pitch role.
+* Reads the CAD incident.
+* Gets a full picture of what is happening.
+* Transmits to units and explains what is happening.
+* Provides any information responders need to get to the location.
+* Monitors the incident.
+* Updates unit status.
+
+6. Police dispatch workflow
+   Police roles are split by geography/region.
+
+Police dispatchers:
+
+* Assign and dispatch officers to incidents.
+* Update officers’ status.
+* Provide anything officers need, such as warrant checks or additional information.
+* Dispatch and update the status of officers who are patrolling or on duty.
+* This is different from officers who are available to be assigned to an incident.
+* Check on responders.
+* Respond to calls and radio transmissions.
+
+7. Data role
+
+* There is also a data role that helps with additional research for officers when police dispatchers are too busy.
+
+8. Staff distribution
+   Typical staff per shift:
+
+* 9–12 people on the floor.
+* 1–3 call takers.
+* 2–4 police dispatchers.
+* 2–3 fire dispatchers.
+
+Interaction requirements:
+
+* Users should be able to toggle layers on and off.
+* Suggested layers:
+
+  * Call intake
+  * CAD / system interactions
+  * Fire dispatch
+  * Police dispatch
+  * Data support
+  * Communication paths
+  * Staff distribution
+  * Role responsibilities
+  * Research notes / observations
+* When a layer is turned off, related nodes, arrows, cards, and details should hide or fade.
+* Users should be able to focus on one workflow area at a time.
+* Users should be able to click a workflow node, role card, or section to open a detail panel.
+* The detail panel should show role responsibilities, notes, systems used, and any relevant observations.
+* The diagram should work well on desktop.
+* It should still be usable on smaller screens, even if the layout becomes stacked, scrollable, or simplified.
+* Avoid requiring a backend unless absolutely necessary.
+
+Replicability requirements:
+Please structure the app so future dispatch center workflows can be added by editing a JSON or TypeScript data file.
+
+Each dispatch center should be represented by structured data with fields like:
+
+* Dispatch center name
+* Visit date
+* Location
+* Summary
+* Workflow steps
+* Roles
+* Systems/tools used
+* Communication paths
+* Staff distribution
+* Layers
+* Notes
+* Tags or categories
+* Optional comparison points
+* Optional screenshots or supporting artifacts
+
+The visualization should be generated from this data as much as possible.
+
+Please create a clean data model that allows me to add future dispatch centers without rebuilding the UI.
+
+Technical requirements:
+
+* Use React with TypeScript.
+* Use the Figma MCP to inspect and translate the provided Figma wireframe.
+* Use a component-based structure.
+* Use a diagram/flow library only if it helps. If the Figma layout is more custom and easier to preserve with HTML/CSS/SVG, use that instead.
+* Keep the UI clean, professional, and easy for non-technical users to understand.
+* Use accessible colors, readable labels, and clear hover/click states.
+* Avoid overly complex animations.
+* Make the code easy for a designer or newer front-end developer to understand.
+* Include comments where the data structure or interaction logic might be confusing.
+* Avoid building something so custom that I cannot easily update it later.
+
+Important implementation preference:
+Please prioritize a data-driven component system over a hard-coded diagram.
+
+The Figma wireframe should guide the layout and design, but the content should come from structured data. I want to be able to create another dispatch center flow later by copying a data file, editing the text, roles, systems, and paths, and having the UI update without rebuilding the whole page.
+
+Embedding / SharePoint requirement:
+I eventually want this to be accessible from a SharePoint page.
+
+Please investigate and recommend the simplest path for making this work with SharePoint. Consider options such as:
+
+1. Hosting the app somewhere else and embedding it into SharePoint using an iframe or Embed web part.
+2. Building it as a static site that can be hosted internally.
+3. Whether SharePoint allows this kind of interactive embed directly.
+4. Any limitations around scripts, iframes, permissions, or internal hosting.
+5. What questions I should ask IT or SharePoint admins.
+
+Please do not assume the final SharePoint approach. Give me the best technical recommendation based on what is realistic and low-friction.
+
+Deliverables I want from you:
+
+1. Inspect the provided Figma wireframe through Figma MCP.
+2. Summarize the intended structure of the Figma design.
+3. Propose a brief implementation plan.
+4. Build a working interactive prototype.
+5. Create a reusable data structure for dispatch center workflows.
+6. Create a clean layer toggle system.
+7. Add clickable workflow nodes or role cards with detail panels.
+8. Add a sample data file using the dispatch workflow described above.
+9. Add clear instructions for how I can add another dispatch center later.
+10. Add a short recommendation for how this could be embedded or linked from SharePoint.
+11. Add a README that explains how to run, edit, and publish the prototype.
+
+Design direction:
+
+* Use the provided Figma wireframe as the primary visual guide.
+* Keep the design clean and internal-product focused.
+* Make it feel like a research hub artifact, not a flashy marketing page.
+* Use clear sections and labels.
+* Suggested color coding:
+
+  * Blue for police dispatch
+  * Red/orange for fire/medical dispatch
+  * Purple for CAD/communication
+  * Green for data support
+  * Neutral gray for general intake and staff information
+* Keep the visual hierarchy simple and readable.
+
+Before building:
+Please first inspect the existing project structure if there is one.
+Then inspect the Figma wireframe using Figma MCP.
+Then propose the implementation plan briefly.
+After that, start building the prototype.
+
+If there are major technical tradeoffs, explain them clearly and recommend the simplest option.

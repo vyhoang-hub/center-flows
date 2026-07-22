@@ -1,0 +1,190 @@
+/* =============================================================================
+ * APP LAYOUT & COMPONENTS
+ * ========================================================================== */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; height: 100%;
+  font-family: var(--font);
+  color: var(--ink); background: var(--bg);
+}
+
+.app { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+
+.app-header {
+  display: flex; align-items: baseline; gap: 16px;
+  padding: 14px 22px; background: var(--panel-bg);
+  border-bottom: 1px solid var(--border); z-index: 5;
+}
+.app-header h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
+.app-header .sub { color: var(--ink-soft); font-size: 13px; }
+.app-header .tags { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.app-header .tag {
+  font-size: 11px; color: var(--ink-soft);
+  background: var(--neutral-soft); border-radius: 20px; padding: 3px 10px;
+}
+
+.app-body {
+  position: relative; display: grid;
+  grid-template-columns: 1fr 232px; min-height: 0;
+}
+
+/* ---- Canvas -------------------------------------------------------------- */
+.canvas-wrap {
+  position: relative; overflow: auto;
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 26px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 26px 100%,
+    var(--canvas-bg);
+}
+/* The stage is authored in Figma pixels and scaled to fit. */
+.stage { position: relative; transform-origin: top left; }
+
+/* Connectors: exact Figma SVGs, positioned absolutely. Behind the nodes. */
+.connector { position: absolute; pointer-events: none; }
+.connector img { display: block; width: 100%; height: 100%; }
+
+/* Zones: data-drawn grouping outlines (no SVG export needed). */
+.zone {
+  position: absolute; pointer-events: none;
+  border: 1.5px dashed var(--c, var(--tan));
+  border-radius: 18px;
+}
+.zone-label {
+  position: absolute; top: -11px; left: 24px;
+  background: var(--paper); color: var(--ink-soft);
+  font-size: 12px; font-weight: 600; letter-spacing: .5px;
+  padding: 0 8px; white-space: nowrap;
+}
+
+/* Edges: data-drawn curved lines between nodes. One SVG over the whole stage. */
+.edge-layer { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
+.edge.faded { opacity: .08; }
+.zone.faded { opacity: .08; }
+
+/* ---- Nodes --------------------------------------------------------------- */
+.node {
+  position: absolute; padding: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  cursor: pointer; border: none; background: transparent;
+  transition: transform .12s ease, filter .12s ease, opacity .2s ease;
+  z-index: 2;
+}
+.node:hover { transform: scale(1.05); filter: drop-shadow(var(--shadow-lift)); z-index: 3; }
+.node:focus-visible { outline: 3px solid #7aa7ff; outline-offset: 3px; }
+.node .lbl { line-height: 1.15; font-weight: 500; }
+.node .ic  { font-size: 30px; line-height: 1; }
+
+/* circle roles — solid slate, white text (Figma) */
+.node.circle {
+  border-radius: 50%; background: var(--slate); color: #fff;
+}
+.node.circle .lbl { font-size: 12px; padding: 6px; }
+
+/* octagon field resources — light blue fill */
+.node.octagon {
+  background: var(--octagon); color: var(--ink);
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+}
+.node.octagon .lbl { font-size: 11px; padding: 2px 8px; }
+
+/* system (CAD) boxes — sage, rounded */
+.node.system {
+  background: var(--sage); color: var(--ink); border-radius: 4px;
+}
+.node.system .lbl { font-size: 11px; padding: 8px; }
+
+/* faded = a layer this node belongs to is off */
+.faded { opacity: .08 !important; pointer-events: none; }
+
+/* ---- Pills / labels ------------------------------------------------------ */
+.pill {
+  position: absolute; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; white-space: nowrap; pointer-events: none;
+}
+.pill.comm         { background: var(--pink);   color: #fff; border-radius: 4px; }
+.pill.c911         { background: var(--red);    color: #fff; border-radius: 22px; }
+.pill.nonemergency { background: var(--yellow); color: var(--ink); border-radius: 17px; }
+.pill.zonelabel    { background: var(--paper);  color: var(--ink); font-weight: 500; }
+.pill.flowlabel    { background: var(--paper);  color: var(--ink); }
+.pill.annotation   { color: var(--ink-soft); font-style: italic; background: transparent; }
+
+/* ---- Layer panel --------------------------------------------------------- */
+.layer-panel {
+  background: var(--panel-bg); border-left: 1px solid var(--border);
+  padding: 18px 18px 12px; display: flex; flex-direction: column; overflow-y: auto;
+}
+.layer-panel h2 {
+  font-size: 11px; letter-spacing: 1.5px; color: var(--ink-soft);
+  text-transform: uppercase; margin: 0 0 12px;
+}
+.layer-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 0; cursor: pointer; user-select: none;
+}
+.layer-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+.layer-name { font-size: 13.5px; flex: 1; }
+.switch {
+  width: 32px; height: 18px; border-radius: 20px; background: #cdd4dd;
+  position: relative; transition: background .15s ease; flex: none;
+}
+.switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .15s ease;
+}
+.layer-row[aria-pressed="true"] .switch { background: var(--slate); }
+.layer-row[aria-pressed="true"] .switch::after { left: 16px; }
+
+.panel-actions { margin-top: auto; padding-top: 16px; display: flex; gap: 16px; }
+.link-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--ink-soft); font-size: 12px; text-decoration: underline;
+}
+.link-btn:hover { color: var(--ink); }
+
+.staff-card {
+  margin-top: 16px; padding: 12px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--neutral-soft);
+}
+.staff-card h3 { margin: 0 0 6px; font-size: 12px; }
+.staff-card p { margin: 0 0 6px; font-size: 12.5px; }
+.staff-card ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); }
+
+/* ---- Detail panel -------------------------------------------------------- */
+.detail {
+  position: absolute; top: 0; right: 0; height: 100%; width: 380px; max-width: 90vw;
+  background: var(--panel-bg); border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lift);
+  transform: translateX(100%); transition: transform .22s ease;
+  z-index: 20; display: flex; flex-direction: column;
+}
+.detail.open { transform: translateX(0); }
+.detail-head { padding: 18px 20px; border-bottom: 1px solid var(--border); border-top: 4px solid var(--c); }
+.detail-head .kicker { font-size: 12px; color: var(--c); font-weight: 700; }
+.detail-head h2 { margin: 4px 0 2px; font-size: 19px; }
+.detail-close {
+  position: absolute; top: 14px; right: 14px; border: none; background: none;
+  font-size: 22px; cursor: pointer; color: var(--ink-soft); line-height: 1;
+}
+.detail-body { padding: 18px 20px; overflow-y: auto; }
+.detail-body h3 {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--ink-soft); margin: 18px 0 8px;
+}
+.detail-body h3:first-child { margin-top: 0; }
+.detail-body ul { margin: 0; padding-left: 20px; }
+.detail-body li { margin-bottom: 6px; font-size: 14px; line-height: 1.45; }
+.chip {
+  display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 6px;
+  background: var(--c-soft); color: var(--c); margin: 0 6px 6px 0;
+}
+
+/* ---- Responsive ---------------------------------------------------------- */
+@media (max-width: 820px) {
+  .app-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .layer-panel { border-left: none; border-top: 1px solid var(--border); max-height: 40vh; }
+  .app-header .tags { display: none; }
+}

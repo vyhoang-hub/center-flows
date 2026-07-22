@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dispatch Workflow</title>
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="app-header">
+      <h1 id="centerName">Dispatch Center</h1>
+      <span class="sub" id="centerSub"></span>
+      <div class="tags" id="centerTags"></div>
+    </header>
+
+    <!-- Body: canvas + layer panel -->
+    <div class="app-body">
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="stage" id="stage"></div>
+      </div>
+
+      <!-- Layer panel -->
+      <aside class="layer-panel">
+        <h2>Layers</h2>
+        <div id="layerList"></div>
+        <div class="panel-actions">
+          <button class="link-btn" id="showAll">Show all</button>
+          <button class="link-btn" id="hideAll">Hide all</button>
+        </div>
+        <div class="staff-card" id="staffCard"></div>
+      </aside>
+
+      <!-- Detail panel (slides in from the right when a node is clicked) -->
+      <aside class="detail" id="detail" data-color="neutral">
+        <div class="detail-head" id="detailHead"></div>
+        <div class="detail-body" id="detailBody"></div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Load order matters: data first, then renderers, then the app wiring.
+       Plain <script> tags (no modules) so it works from a double-clicked file. -->
+  <!-- To show a different dispatch center, point this line at another data file. -->
+  <script src="data/norcomm.js"></script>
+  <script src="js/diagram.js"></script>
+  <script src="js/panels.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

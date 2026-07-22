@@ -1,0 +1,55 @@
+/* =============================================================================
+ * THEME — colors & tokens (taken directly from the Figma design)
+ * =============================================================================
+ * The Figma palette is intentionally muted. Role circles are all one slate;
+ * category color coding lives in labels, pills, and the detail-panel accent.
+ * ========================================================================== */
+
+:root {
+  /* --- Exact Figma fills --------------------------------------------------- */
+  --slate:      #354a57;   /* all role circles */
+  --octagon:    #c9d9e4;   /* field-resource octagons */
+  --sage:       #a4c5a4;   /* CAD / system boxes */
+  --pink:       #b866a3;   /* communication pills & dashed comm paths */
+  --red:        #c95548;   /* 911 pill */
+  --yellow:     #e2ce88;   /* non-emergency pill */
+  --tan:        #c7c0b8;   /* dashed zone outlines */
+  --flow:       #6b7280;   /* solid incident-flow lines */
+  --paper:      #fefefd;   /* diagram background / pill fills */
+
+  /* --- Category accents (detail panel + layer dots), per concept doc ------- */
+  --police:     #2f6fdb;   --police-soft: #e7f0fd;
+  --fire:       #e2542c;   --fire-soft:   #fdece6;
+  --system:     #4f8a4f;   --system-soft: #eaf3ea;
+  --data:       #1f9d68;   --data-soft:   #e4f6ee;
+  --neutral:    #354a57;   --neutral-soft:#eef1f5;
+
+  /* --- Surfaces / type ----------------------------------------------------- */
+  --bg:         #f3f4f6;
+  --canvas-bg:  #fefefd;
+  --panel-bg:   #ffffff;
+  --border:     #e5e7eb;
+  --ink:        #111827;
+  --ink-soft:   #6b7280;
+  --grid:       #eceef1;
+
+  --radius:     10px;
+  --shadow:     0 1px 3px rgba(16,24,40,.08), 0 4px 12px rgba(16,24,40,.06);
+  --shadow-lift:0 6px 20px rgba(16,24,40,.16);
+  --font: "Inter", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Map category name -> accent vars for the detail panel & layer dots. */
+[data-cat="police"]  { --c: var(--police);  --c-soft: var(--police-soft);  }
+[data-cat="fire"]    { --c: var(--fire);    --c-soft: var(--fire-soft);    }
+[data-cat="system"]  { --c: var(--system);  --c-soft: var(--system-soft);  }
+[data-cat="data"]    { --c: var(--data);    --c-soft: var(--data-soft);    }
+[data-cat="neutral"] { --c: var(--neutral); --c-soft: var(--neutral-soft); }
+
+/* Layer-dot colors */
+[data-color="slate"]   { --c: var(--slate);   }
+[data-color="blue"]    { --c: var(--octagon); }
+[data-color="sage"]    { --c: var(--sage);    }
+[data-color="pink"]    { --c: var(--pink);    }
+[data-color="flow"]    { --c: var(--flow);    }
+[data-color="neutral"] { --c: var(--ink-soft);}

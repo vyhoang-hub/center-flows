@@ -1,0 +1,12 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# Node (not used here, but guards against accidental installs)
+node_modules/
+
+# Local Claude Code settings (keep out of the shared repo)
+.claude/settings.local.json

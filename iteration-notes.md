@@ -1,0 +1,47 @@
+# Iteration Notes
+
+> Put the changes you want made below. When you say **"check iteration notes"**, I'll read this file and make the changes. I'll ask before executing if anything is unclear.
+
+---
+
+## To Do
+
+<!-- Add changes here. Example:
+- [ ] Change the header background color to dark blue
+- [ ] Fix the alignment of the cards on the home page
+-->
+
+_(nothing pending)_
+
+---
+
+## Done
+
+### Round 4 — Real Figma sync + replicable components
+Figma Dev Mode MCP is now connected, so the design was read directly (node `1:8`).
+- [x] **Downloaded the 11 authentic connector SVGs** that earlier rounds couldn't access, straight from the Dev Mode server. All 36 Figma vectors now exist locally.
+- [x] **Rebuilt `data/norcomm.js` connectors** with the real geometry (top-left x/y + true viewBox w/h), and re-sorted every line into its correct layer by its actual Figma stroke color: tan `#C7C0B8` → departments, pink `#B866A3` → communications, gray `#929292` → flow. Added two lines that were missing entirely (`789ea523` data→police-CAD flow, `6e62f17f` supervisor→dispatch comm).
+- [x] **Removed the three fabricated placeholder SVGs** (`sup-police-comm`, `sup-fire-comm`, `arrow-to-cad-fire`) from Rounds 1-2 — they were hand-drawn guesses and are now replaced by authentic vectors.
+- [x] **Added a procedural edge + zone renderer** (`js/diagram.js`) so new site visits can draw lines and grouping outlines from pure data (`edges: [{from, to, curve, style, color}]`, `zones: [{x,y,w,h,label}]`) with **no Figma export required**. Previously the engine only drew pre-exported SVGs, so `_template.js`'s `edges`/`zones` were silently ignored — that gap is now closed. CSS (`css/app.css`) and layer-toggle visibility (`js/app.js`) updated to match.
+- [x] **Rewrote `data/_template.js`** into a complete, runnable example using the procedural `edges`/`zones` path, and **fixed the coordinate docs** (x/y is top-left, not center) in the template and README.
+
+### Round 1 — NORCOMM Dispatch Workflow
+- [x] **Header tags** changed to: Location: Bellevue, WA / Consolidated Agency (call taking + police dispatch + fire dispatch) / US Medium-size center. _(data/norcomm.js)_
+- [x] **Supervisor → Police** communication line added (pink dashed, arrowhead toward Police). New asset `assets/sup-police-comm.svg`.
+- [x] **Supervisor → Fire** communication line — ⚠️ NOTE: no existing Sup→Fire line was in the data, so I **created** a new pink dashed line with the Fire-pointing arrowhead (per your "add arrowhead to existing" answer, but there was nothing to add to). New asset `assets/sup-fire-comm.svg`. Please verify this is the connection you meant.
+- [x] **Arrowhead into CAD** ('digital command & control software') from fire/ems resources added. New asset `assets/arrow-to-cad-fire.svg`.
+
+> ⚠️ Positions for the three new SVG elements are best-effort guesses in Figma coordinate space. Open index.html, then tell me how to nudge each (e.g. "move Sup→Police line left 40px, down 10px") and I'll adjust in the next round.
+
+### Round 2 — arrowhead style correction
+- [x] Rebuilt the three new SVGs to match the **authentic Figma export style**: connector + arrowhead as a single/paired *filled* path (no `stroke-width` dashed lines, no chunky triangle). Slender filled triangle arrowhead, colors `#B866A3` (comm) / `#929292` (flow) — matching existing assets like `967d…svg` and `5785…svg`.
+
+> 🚧 BLOCKER: The Figma link (node 1-8) is private — WebFetch returns 403 and no Figma MCP server is connected, so I could NOT read the actual design. I matched the arrowhead style to the existing exported assets instead. To implement the design **exactly**, either:
+>   1. Connect the Figma Dev Mode MCP server (Figma desktop → Preferences → enable "Dev Mode MCP Server"), or
+>   2. Export the frame as SVG/PNG (or screenshot) into the project and I'll match it.
+> Also note: existing pink comm lines are *dashed*; my new Sup→Police / Sup→Fire lines are currently *solid*. Say the word and I'll make them dashed to match.
+
+### Round 3 — Figma MCP setup (in progress)
+- ✅ Registered Figma Dev Mode MCP server with Claude Code: `figma-dev-mode` → `http://127.0.0.1:3845/sse`. Health check: Connected.
+- ⛔ **Action needed: restart Claude Code.** MCP tools load at session startup; the server was added mid-session so its tools aren't live yet.
+- **Next session TODO:** Use `mcp__figma-dev-mode__get_code` / `get_image` / `get_metadata` on node `1-8` of file 6obaodufXt4EpNSinEHvJX to pull exact geometry + arrowhead paths, then rebuild the Supervisor→Police, Supervisor→Fire, and fire/ems→CAD connectors to match the real design (positions, dashed vs solid, and arrowhead shape).
