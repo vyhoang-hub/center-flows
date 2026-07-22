@@ -21,17 +21,25 @@
       <div class="canvas-wrap" id="canvasWrap">
         <div class="stage" id="stage"></div>
 
-        <!-- Zoom / pan / fullscreen controls (float over the canvas) -->
+        <!-- Zoom / pan / fullscreen toolbar (floats over the canvas) -->
         <div class="canvas-controls" id="canvasControls">
-          <button class="ctrl-btn" id="zoomIn"  aria-label="Zoom in"  title="Zoom in">+</button>
-          <button class="ctrl-btn" id="zoomOut" aria-label="Zoom out" title="Zoom out">&minus;</button>
-          <button class="ctrl-btn" id="zoomFit" aria-label="Fit to screen" title="Fit to screen">Fit</button>
-          <button class="ctrl-btn" id="fullscreen" aria-label="Toggle fullscreen" title="Fullscreen">⛶</button>
+          <button class="ctrl-btn" id="zoomIn"  title="Zoom in">
+            <span class="ctrl-ic">+</span><span class="ctrl-lbl">Zoom in</span>
+          </button>
+          <button class="ctrl-btn" id="zoomOut" title="Zoom out">
+            <span class="ctrl-ic">&minus;</span><span class="ctrl-lbl">Zoom out</span>
+          </button>
+          <button class="ctrl-btn" id="zoomFit" title="Fit the whole diagram">
+            <span class="ctrl-ic">⤢</span><span class="ctrl-lbl">Fit</span>
+          </button>
+          <button class="ctrl-btn" id="fullscreen" title="Fullscreen">
+            <span class="ctrl-ic">⛶</span><span class="ctrl-lbl">Fullscreen</span>
+          </button>
         </div>
 
         <!-- Reopen tab, shown only when the layer panel is collapsed -->
-        <button class="layers-reopen" id="layersReopen" aria-label="Show layers panel" title="Show layers">
-          ☰ Layers
+        <button class="layers-reopen" id="layersReopen" title="Show the layers panel">
+          ☰ Show Layers
         </button>
       </div>
 
@@ -39,7 +47,9 @@
       <aside class="layer-panel" id="layerPanel">
         <div class="layer-panel-head">
           <h2>Layers</h2>
-          <button class="panel-collapse" id="panelCollapse" aria-label="Hide layers panel" title="Hide panel">&times;</button>
+          <button class="panel-collapse" id="panelCollapse" title="Hide the layers panel">
+            Hide &rsaquo;
+          </button>
         </div>
         <div id="layerList"></div>
         <div class="panel-actions">

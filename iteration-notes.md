@@ -17,6 +17,12 @@ _(nothing pending)_
 
 ## Done
 
+### Round 7 — Clearer, labeled controls (+ bundler bug fix)
+- [x] **Found why the Round 6 buttons weren't visible:** `build.sh` had the page `<body>` **hardcoded as a stale copy**, so the bundle never included the zoom/collapse buttons (wheel-zoom + drag worked because those are in the JS). Fixed the bundler to **extract the body straight from `index.html`** via awk, so it can never drift again.
+- [x] **Turned the icon-only controls into a labeled toolbar** — "Zoom in", "Zoom out", "Fit", "Fullscreen" now show icon **and** text, and are bigger. _(index.html, css/app.css `.ctrl-btn`/`.ctrl-lbl`)_
+- [x] **Made the panel toggle obvious** — the subtle × is now a labeled **"Hide ›"** button in the panel header, and the reopen tab is a prominent slate **"☰ Show Layers"** button. _(index.html, css/app.css)_
+- [x] Rebuilt `dist/index.html` — labels confirmed present, self-contained, single `.app` container.
+
 ### Round 6 — Readability in the SharePoint embed (zoom / pan / collapse / fullscreen)
 Problem (from the uploaded screenshot): embedded in SharePoint, the whole diagram was scaled down to fit the panel, so text was unreadable and there was a horizontal scrollbar.
 - [x] **Zoom + pan** — mouse-wheel zoom toward the cursor, drag-to-pan the canvas, and floating **+ / − / Fit** buttons (bottom-left). Clicking a node still opens its detail panel (drag only pans on empty canvas). _(js/diagram.js: new scale/tx/ty transform model replacing the old fit-only scaling; js/app.js wiring; css/app.css `.canvas-controls`)_

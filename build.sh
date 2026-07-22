@@ -63,34 +63,15 @@ echo "  inlined $count SVG asset(s)"
   echo '  </style>'
   echo '</head>'
   echo '<body>'
-  # Body markup mirrors index.html exactly (kept in sync by hand — it rarely changes).
-  cat <<'HTML'
-  <div class="app">
-    <header class="app-header">
-      <h1 id="centerName">Dispatch Center</h1>
-      <span class="sub" id="centerSub"></span>
-      <div class="tags" id="centerTags"></div>
-    </header>
-    <div class="app-body">
-      <div class="canvas-wrap" id="canvasWrap">
-        <div class="stage" id="stage"></div>
-      </div>
-      <aside class="layer-panel">
-        <h2>Layers</h2>
-        <div id="layerList"></div>
-        <div class="panel-actions">
-          <button class="link-btn" id="showAll">Show all</button>
-          <button class="link-btn" id="hideAll">Hide all</button>
-        </div>
-        <div class="staff-card" id="staffCard"></div>
-      </aside>
-      <aside class="detail" id="detail" data-color="neutral">
-        <div class="detail-head" id="detailHead"></div>
-        <div class="detail-body" id="detailBody"></div>
-      </aside>
-    </div>
-  </div>
-HTML
+  # Body markup is extracted straight from index.html (the lines between <body>
+  # and the first <script>), so the bundle NEVER drifts from the real page.
+  # We drop index.html's <script src=...> tags because the bundle inlines all JS
+  # right below instead.
+  awk '
+    /<body>/     { inbody=1; next }
+    inbody && /<script/ { exit }   # stop at the external <script> tags
+    inbody       { print }
+  ' index.html
   echo '  <script>'
   cat "$ASSET_JS"        # window.ASSET_MAP (inlined SVGs) — must come first
   echo ''

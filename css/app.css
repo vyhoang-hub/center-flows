@@ -44,29 +44,36 @@ html, body {
 /* The stage is authored in Figma pixels; JS pans/zooms it via transform. */
 .stage { position: relative; transform-origin: 0 0; will-change: transform; }
 
-/* ---- Zoom / pan / fullscreen controls ------------------------------------ */
+/* ---- Zoom / pan / fullscreen toolbar ------------------------------------- */
 .canvas-controls {
   position: absolute; left: 14px; bottom: 14px; z-index: 6;
   display: flex; flex-direction: column; gap: 6px;
 }
 .ctrl-btn {
-  width: 34px; height: 34px; border: 1px solid var(--border);
-  background: var(--panel-bg); color: var(--ink); border-radius: 8px;
-  font-size: 17px; line-height: 1; cursor: pointer; box-shadow: var(--shadow);
-  display: flex; align-items: center; justify-content: center; padding: 0;
+  display: flex; align-items: center; gap: 8px;
+  min-width: 118px; height: 36px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--panel-bg); color: var(--ink);
+  font-family: var(--font); font-size: 13px; font-weight: 500;
+  line-height: 1; cursor: pointer; box-shadow: var(--shadow); text-align: left;
 }
-.ctrl-btn:hover { background: var(--neutral-soft); }
+.ctrl-btn:hover { background: var(--neutral-soft); border-color: var(--slate); }
 .ctrl-btn:active { transform: translateY(1px); }
-#zoomFit { font-size: 12px; font-weight: 600; }
+.ctrl-btn:focus-visible { outline: 3px solid #7aa7ff; outline-offset: 2px; }
+.ctrl-ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; font-size: 17px; flex: none;
+}
+.ctrl-lbl { white-space: nowrap; }
 
-/* Small tab to reopen the layers panel; only visible when collapsed. */
+/* Prominent tab to reopen the layers panel; only visible when collapsed. */
 .layers-reopen {
   position: absolute; top: 14px; right: 14px; z-index: 6; display: none;
-  border: 1px solid var(--border); background: var(--panel-bg); color: var(--ink);
-  border-radius: 8px; padding: 7px 12px; font-size: 12.5px; cursor: pointer;
-  box-shadow: var(--shadow); font-family: var(--font);
+  border: 1px solid var(--slate); background: var(--slate); color: #fff;
+  border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 600;
+  cursor: pointer; box-shadow: var(--shadow); font-family: var(--font);
 }
-.layers-reopen:hover { background: var(--neutral-soft); }
+.layers-reopen:hover { filter: brightness(1.1); }
 body.panel-collapsed .layers-reopen { display: block; }
 
 /* Connectors: exact Figma SVGs, positioned absolutely. Behind the nodes. */
@@ -153,10 +160,11 @@ body.panel-collapsed .layers-reopen { display: block; }
   text-transform: uppercase; margin: 0;
 }
 .panel-collapse {
-  border: none; background: none; cursor: pointer; color: var(--ink-soft);
-  font-size: 20px; line-height: 1; padding: 0 2px;
+  border: 1px solid var(--border); background: var(--panel-bg); cursor: pointer;
+  color: var(--ink); font-family: var(--font); font-size: 12px; font-weight: 600;
+  line-height: 1; padding: 6px 10px; border-radius: 7px;
 }
-.panel-collapse:hover { color: var(--ink); }
+.panel-collapse:hover { background: var(--neutral-soft); border-color: var(--slate); }
 
 /* Collapsed: hide the panel entirely so the canvas spans full width. */
 body.panel-collapsed .app-body { grid-template-columns: 1fr; }
