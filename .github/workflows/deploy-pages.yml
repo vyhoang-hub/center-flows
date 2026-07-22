@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+# Deploys the static site (repo root) to GitHub Pages on every push to main.
+# No build step — the site is plain HTML/CSS/JS, so we just upload the files.
+
+on:
+  push:
+    branches: [main]
+  # Allow manual runs from the Actions tab.
+  workflow_dispatch:
+
+# Grant the token the permissions Pages deployment needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a new push cancel an in-progress deploy, but never cancel a run
+# that is already publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Publish the whole repo root (index.html lives at the top level).
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
