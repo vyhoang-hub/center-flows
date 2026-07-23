@@ -1,8 +1,12 @@
 # Hosting & embedding notes
 
-## Current state (2026-07-22)
+## Current state (2026-07-23)
 
-- **Live now:** GitHub Pages (public) — see steps below. Chosen because SharePoint
+- **Ready but not live yet:** GitHub Pages (public) — the deployment workflow is
+  present, but Pages has not been enabled in repository settings. The current
+  workflow fails at **Configure Pages** and the expected URL returns 404. Complete
+  the one-time setting below, then re-run the workflow.
+- **Why this host is needed:** SharePoint
   cannot run this app's JavaScript in an embed (its file preview / File-viewer /
   "Copy embed code" all route through `_layouts/15/embed.aspx`, a script-blocking
   sandbox). GitHub Pages serves real HTML, so the diagram renders, and SharePoint's

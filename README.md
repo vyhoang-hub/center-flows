@@ -14,8 +14,8 @@ future dispatch centers by **editing a data file, not rebuilding the UI**.
 This machine has no Node.js, npm, or Python, and React/Vite has failed here before.
 So the prototype is intentionally **plain HTML, CSS, and JavaScript with no build
 step**. Every feature from the concept doc is still here — data-driven rendering,
-layer toggles, clickable detail panels, and copy-a-file replicability. As a bonus,
-a static site like this is the *easiest* possible thing to embed in SharePoint.
+layer toggles, clickable detail panels, and copy-a-file replicability. A static
+site is also straightforward to host and then embed in SharePoint.
 
 ---
 
@@ -34,7 +34,7 @@ After you edit any file, just **refresh the browser** to see the change.
 
 ```
 UX research hub/
-  index.html          ← open this to view / embed this to publish
+  index.html          ← open locally; also the hosted site's entry page
   css/
     theme.css          ← colors & design tokens (edit colors here)
     app.css            ← layout and component styling
@@ -72,11 +72,12 @@ saved locally — the page does **not** depend on Figma being open.
    <script src="data/springfield.js"></script>
    ```
 4. **Refresh** the browser to preview locally.
-5. **To publish it to SharePoint**, bundle that center into a single file and
-   upload it (see "Publishing / embedding" below):
+5. **For an offline, single-file copy**, bundle that center:
    ```
    bash build.sh data/springfield.js
    ```
+   For an interactive SharePoint experience, publish the site to an approved
+   web host and embed that hosted URL (see "Publishing / embedding" below).
 
 ### The data model (per center)
 
@@ -128,74 +129,62 @@ in `css/theme.css` to restyle.
 
 ## Publishing / embedding in SharePoint
 
-**This content is internal/sensitive, so it must NOT go on the public internet.**
-The approach below keeps everything inside SharePoint, behind your org's normal
-Microsoft 365 login — no separate hosting, no public exposure.
+### Why uploading the HTML file to SharePoint does not work
 
-### The single-file bundle (this is what works — start here)
+The app's header, canvas background, controls, and empty Layers shell are static
+HTML. The nodes, labels, lines, layer rows, and interactions are created by
+JavaScript. SharePoint's document preview, File Viewer, and generated "Copy embed
+code" URL route the file through `_layouts/15/embed.aspx`, whose sandbox blocks
+that JavaScript. The result looks like a diagram bug because the shell remains
+visible while the actual diagram is missing.
 
-A SharePoint document library stores files but does **not** run a multi-file web
-app: relative links to `css/`, `js/`, and `assets/` break and you get a blank,
-unstyled page. The fix is to serve the app as **one self-contained HTML file**.
-
-`build.sh` bundles the entire app — CSS, the data file, all JS, and every SVG
-(embedded as base64) — into a single `dist/index.html` with **no external
-references**. That one file renders correctly when uploaded to SharePoint.
-
-**Build it (re-run whenever you change the diagram or the data):**
+Bundling the app into `dist/index.html` solves broken relative file paths, but it
+cannot override a SharePoint iframe that disallows scripts. The bundle remains
+useful for local/offline sharing:
 
 ```
 bash build.sh                 # bundles data/norcomm.js -> dist/index.html
-bash build.sh data/other.js   # bundle a different center
+bash build.sh data/other.js   # bundles another center
 ```
 
-> The pre-built `dist/index.html` is committed to this repo, so if you haven't
-> changed anything you can upload it directly without re-running the build.
+### Working interactive path
 
-**Verify before uploading:** double-click `dist/index.html` on your computer and
-confirm the diagram, layers, and detail panels all work. That proves the bundle
-is good independent of SharePoint.
+Host the static site at a normal HTTPS URL, then put that URL in SharePoint's
+**Embed** web part. A normal web host permits the JavaScript that renders and
+operates the diagram.
 
-### Step-by-step: embed in SharePoint
+This repository currently contains a GitHub Pages deployment workflow. GitHub
+Pages is public, and the repository itself is currently public, so do not put
+sensitive research in this version. To enable the existing workflow one time:
 
-1. **Verify locally** — double-click `dist/index.html` and confirm it looks right.
-2. Go to the SharePoint site your audience uses and open (or create) a **document
-   library**, e.g. "Dispatch Research". Upload **just `dist/index.html`** (you can
-   rename it, e.g. `norcomm.html`).
-3. Click the uploaded file in the library and confirm it renders in the browser.
-   Copy that page's URL from the address bar.
-4. Go to the SharePoint **page** where you want the diagram → **Edit** → click **+**
-   to add a web part → choose **Embed**.
-5. Paste the file's URL. Set a generous height (800px+). **Publish** the page.
-6. Open the page as a normal viewer to confirm the diagram shows and the layer
-   toggles work. *(Confirmed working — the single-file bundle renders in SharePoint.)*
+1. Open the GitHub repository.
+2. Go to **Settings → Pages**.
+3. Under **Build and deployment → Source**, select **GitHub Actions**.
+4. Re-run the latest **Deploy to GitHub Pages** workflow (or push a new commit).
+5. Verify `https://vyhoang-hub.github.io/center-flows/`.
+6. In SharePoint, edit the page, add an **Embed** web part, and paste that URL.
 
-**Updating later:** re-run `build.sh`, then re-upload the new `dist/index.html`
-over the old one in the library. The embedded page picks up the change.
+The preferred long-term home for internal research is **Azure Static Web Apps
+with Entra ID sign-in** (or another company-approved internal HTTPS host). After
+IT provides that URL, replace the GitHub Pages URL in SharePoint. See
+`HOSTING.md` for the IT request and migration checklist.
 
-### If a document library ever stops working
+### What will not fix the SharePoint file-preview version
 
-Some tenants tighten security over time and may block inline JavaScript in
-previewed HTML. If a future upload comes up blank, the file trick can't get around
-a script block — you'd need a real internal host. The cleanest Microsoft-native
-option is **Azure Static Web Apps with Entra ID (Azure AD) sign-in** in front of
-it (something IT sets up), then embed that private URL with the same Embed web
-part. An internal intranet web server over HTTPS works too.
+- Re-uploading or renaming `dist/index.html`
+- Clearing the SharePoint cache
+- Changing the zoom, pan, or fit calculations
+- Inlining more JavaScript, CSS, or SVG files
 
-> **Not for this content: GitHub Pages.** A Pages site is **publicly reachable by
-> anyone with the URL**, even from a *private* repo (except GitHub Enterprise
-> Cloud's private Pages). Because this research is internal, the auto-deploy
-> workflow in this repo is **intentionally disabled** — see
-> `.github/workflows/deploy-pages.yml`. Leave it off unless this content is ever
-> formally cleared for public hosting.
+Those changes cannot grant `allow-scripts` to SharePoint's preview iframe.
 
 ### Questions to ask IT / SharePoint admins
 
 - Is the **Embed web part** enabled, and is embedding from *(your host URL)* on the
   allow-list? (Admins can restrict which domains can be iframed.)
 - Do we have an approved place to **host static internal files** over HTTPS?
-- Are **custom scripts** allowed on the target site (usually no — which is why we
-  iframe instead)?
+- Is the approved hosted domain allowed by **HTML Field Security** for the Embed
+  web part?
 - Any **authentication** requirement for the host that would block the iframe?
 
 ### Making the embed clean
