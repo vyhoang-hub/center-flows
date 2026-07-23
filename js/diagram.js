@@ -8,9 +8,42 @@
 var STAGE_W = 2002;
 var STAGE_H = 1303;
 
+/* Lucide icons (https://lucide.dev), inlined as SVG path data so they travel
+   inside the single-file bundle and stay crisp at any zoom. Stroke uses
+   currentColor, so each icon inherits the node/tag text color. Add a new icon
+   by pasting its inner paths here under a short name. */
+var LUCIDE = {
+  shield:     '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  car:        '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+  flame:      '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  ambulance:  '<path d="M10 10H6"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14"/><path d="M8 8v4"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+  "map-pin":  '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  "building": '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+  "bar-chart":'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>'
+};
+
+/* Return an inline <svg> string for a Lucide icon name, or "" if unknown.
+   Falls back gracefully so an emoji or stray name won't break rendering. */
+function iconSvg(name, size) {
+  if (!name || !LUCIDE[name]) return "";
+  size = size || 24;
+  return '<svg class="lucide" viewBox="0 0 24 24" width="' + size + '" height="' + size +
+    '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true">' + LUCIDE[name] + "</svg>";
+}
+
 var Diagram = {
   data: null,
   onNodeClick: null,
+  _selectedEl: null,   // the currently selected node element (for the highlight)
+
+  /* Mark a node element as selected (adds the outline ring). Pass null to clear.
+     Clicking a node calls this; closing the detail card clears it. */
+  select: function (el) {
+    if (this._selectedEl) this._selectedEl.classList.remove("selected");
+    this._selectedEl = el || null;
+    if (this._selectedEl) this._selectedEl.classList.add("selected");
+  },
 
   // Pan/zoom state. scale = zoom factor; tx/ty = pan offset in screen px.
   scale: 1,
@@ -265,11 +298,13 @@ var Diagram = {
       el.style.width = n.w + "px";
       el.style.height = n.h + "px";
       el.setAttribute("aria-label", n.label);
+      // n.icon is a Lucide icon name (e.g. "shield"); render it as inline SVG.
+      var ic = iconSvg(n.icon, 34);
       el.innerHTML =
-        (n.icon ? '<span class="ic">' + n.icon + "</span>" : "") +
+        (ic ? '<span class="ic">' + ic + "</span>" : "") +
         '<span class="lbl">' + esc(n.label) + "</span>";
       el.addEventListener("click", function () {
-        if (Diagram.onNodeClick) Diagram.onNodeClick(n);
+        if (Diagram.onNodeClick) Diagram.onNodeClick(n, el);
       });
       stage.appendChild(el);
     });

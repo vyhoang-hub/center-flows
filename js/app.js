@@ -18,15 +18,26 @@
     [data.meta.location, data.meta.visitDate].filter(Boolean).join(" · ");
   var tagHost = document.getElementById("centerTags");
   (data.meta.tags || []).forEach(function (t) {
+    // A tag may be a plain string (legacy) or { label, tone, icon }.
+    var label = typeof t === "string" ? t : t.label;
+    var tone = typeof t === "string" ? "neutral" : (t.tone || "neutral");
+    var icon = typeof t === "string" ? "" : (t.icon || "");
     var s = document.createElement("span");
     s.className = "tag";
-    s.textContent = t;
+    s.dataset.tone = tone;
+    // icon is a Lucide name (e.g. "map-pin"); render inline SVG at tag size.
+    var ic = iconSvg(icon, 15);
+    s.innerHTML = (ic ? '<span class="tag-ic">' + ic + "</span>" : "") +
+      "<span>" + esc(label) + "</span>";
     tagHost.appendChild(s);
   });
   document.title = data.meta.name + " — Dispatch Workflow";
 
   // --- Diagram --------------------------------------------------------------
-  Diagram.render(data, function (node) { Detail.open(node); });
+  Diagram.render(data, function (node, el) {
+    var wasOpen = Detail.toggle(node);   // returns true if the card is now open
+    Diagram.select(wasOpen ? el : null); // highlight the selected shape, or clear
+  });
 
   // --- Layers ---------------------------------------------------------------
   Panels.initLayers(data, applyVisibility);

@@ -30,10 +30,12 @@ window.DISPATCH_CENTER = {
     summary:
       "A combined 911 and non-emergency dispatch center handling call intake, " +
       "CAD entry, and separate fire/EMS and police dispatch workflows.",
+    // Header tags. Each can be a plain string or { label, tone, icon }.
+    // tone drives the color-code chip: location | agency | size | neutral.
     tags: [
-      "Location: Bellevue, WA",
-      "Consolidated Agency (call taking + police dispatch + fire dispatch)",
-      "US Medium-size center",
+      { label: "Bellevue, WA", tone: "location", icon: "map-pin" },
+      { label: "Consolidated Agency (call taking + police + fire dispatch)", tone: "agency", icon: "building" },
+      { label: "US Medium-size center", tone: "size", icon: "bar-chart" },
     ],
   },
 
@@ -244,24 +246,24 @@ window.DISPATCH_CENTER = {
 
     // Field resources (octagons)
     {
-      id: "patrol-1", type: "octagon", fill: "blue", icon: "👮",
+      id: "patrol-1", type: "octagon", fill: "blue", icon: "shield",
       label: "police on-duty/patrol",
       x: 1679.89, y: 236, w: 126.698, h: 126.698, category: "police", layers: ["resources"],
       detail: { subtitle: "Field resource", notes: ["Officers on duty / patrol, reached by radio."] },
     },
     {
-      id: "patrol-2", type: "octagon", fill: "blue", icon: "🚔",
+      id: "patrol-2", type: "octagon", fill: "blue", icon: "car",
       label: "police on-duty/patrol",
       x: 1807, y: 383, w: 126.698, h: 126.698, category: "police", layers: ["resources"],
       detail: { subtitle: "Field resource", notes: ["Officers on duty / patrol, reached by radio."] },
     },
     {
-      id: "res-fire", type: "octagon", fill: "blue", icon: "🔥", label: "fire resource(s)",
+      id: "res-fire", type: "octagon", fill: "blue", icon: "flame", label: "fire resource(s)",
       x: 776, y: 1028, w: 126.7, h: 126.7, category: "fire", layers: ["resources"],
       detail: { subtitle: "Field resource", notes: ["Fire units dispatched to the incident."] },
     },
     {
-      id: "res-ems", type: "octagon", fill: "blue", icon: "🚑", label: "ems resource(s)",
+      id: "res-ems", type: "octagon", fill: "blue", icon: "ambulance", label: "ems resource(s)",
       x: 909, y: 1028, w: 126.7, h: 126.7, category: "fire", layers: ["resources"],
       detail: { subtitle: "Field resource", notes: ["EMS / medical units dispatched to the incident."] },
     },

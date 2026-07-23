@@ -17,6 +17,21 @@ _(nothing pending)_
 
 ## Done
 
+### Round 12 — Modern floating layout + real icons
+- [x] **Detail card fades in (fade-in-fwd), floats, no longer sidebar.** Replaced the slide-in docked sidebar with a floating rounded card that fades in using the exact `fade-in-fwd` keyframe supplied. It sits left of the layers card so the legend stays visible. _(css/app.css `@keyframes fade-in-fwd`, `.detail`; js/panels.js)_
+- [x] **Selected-shape indicator.** Clicking a node now rings it in its category color (box-shadow ring for circles/boxes; drop-shadow that follows the clip-path for octagons) and lifts it slightly. The ring clears when the card closes (× / Escape / re-click). _(js/diagram.js `Diagram.select`; js/app.js wiring; css/app.css `.node.selected`)_
+- [x] **Floating header + panels (modern look).** Canvas is now full-bleed; the header, layers panel, zoom toolbar, staff card and detail card all float over it as rounded cards with shadows instead of stretching edge-to-edge. _(css/app.css `.app`, `.app-header`, `.app-body`, `.canvas-wrap`, `.layer-panel`)_
+- [x] **Real icons — Lucide (inline SVG).** Swapped every emoji for Lucide icons, inlined as SVG so they stay self-contained in the bundle and crisp at any zoom: shield (patrol), car (patrol vehicle), flame (fire), ambulance (EMS); map-pin / building / bar-chart for the header tags. New `LUCIDE` map + `iconSvg()` helper; data uses icon *names*. _(js/diagram.js, js/app.js, data/norcomm.js, css/app.css)_
+- [x] Rebuilt `dist/index.html` (all inlined, 27 SVGs, zero external refs).
+
+### Round 11 — Diagram-UX polish (while waiting on IT for private hosting)
+- [x] **No more horizontal scroll.** Added `overflow: hidden` to `html, body` and `.app-body` so nothing (including the detail panel) can push out a page scrollbar — content is clipped to the app frame. _(css/app.css)_
+- [x] **Legend stays visible with detail open + click-to-toggle.** The detail panel now docks to the LEFT of the layers column (`right: var(--panel-w)`), so the Layers list is never covered. Clicking a node opens its detail; clicking the **same** node again closes it (like hitting ×). _(css/app.css `.detail`; js/panels.js new `Detail.toggle`/`currentId`; js/app.js wiring)_
+- [x] **Staff distribution floats bottom-left of the canvas** with generous padding, moved out of the right-hand panel; the zoom toolbar moved to the bottom-**right** so they don't collide. _(index.html, css/app.css `.staff-card`/`.canvas-controls`)_
+- [x] **Header pills are prominent + color-coded.** Tags are now bigger, bold, with an icon and a per-tone tint: location=blue, agency=green, size=orange. Data model accepts `{label, tone, icon}` (still back-compatible with plain strings). _(data/norcomm.js meta.tags; js/app.js; css/app.css `.app-header .tag`)_
+- [x] **Fixed the blurry canvas.** Removed `will-change: transform` on `.stage` — it pinned the whole diagram to a GPU layer rasterized at 100% and bitmap-scaled down (the blur). Without it the browser re-rasterizes text/shapes crisply at the current zoom. _(css/app.css `.stage`)_
+- [x] Rebuilt `dist/index.html` (all changes inlined, 27 SVGs, zero external refs).
+
 ### Round 10 — Root cause found: SharePoint sandbox blocks JS → moving to GitHub Pages
 - [x] **Mystery solved.** The diagram was NEVER broken. Direct-open of the file in SharePoint renders the full diagram + diagnostics (`data: images: ALLOWED`, 60 stage children). But SharePoint's **file preview and the Share→"Copy embed code" both use `_layouts/15/embed.aspx`, a sandbox that turns JavaScript OFF** — so the shell shows but the diagram (drawn by JS) stays blank. The File viewer web part does the same. That's a Microsoft security design, not a code bug — which is why none of Rounds 6–9's code fixes changed the embed outcome.
 - [x] **Decision (2026-07-22):** owner accepts public hosting. SharePoint can't run the app's JS in an embed, so host on **GitHub Pages** (serves real HTML, JS runs) and embed that public URL. ⚠️ Pages is publicly reachable by URL even from a private repo — accepted trade-off; revisit if content is reclassified.

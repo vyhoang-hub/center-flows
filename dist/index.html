@@ -71,31 +71,47 @@ html, body {
   margin: 0; height: 100%;
   font-family: var(--font);
   color: var(--ink); background: var(--bg);
+  overflow: hidden;                 /* no page scrollbars; the canvas pans instead */
 }
 
-.app { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+/* --panel-w = width of the right-hand layers card.
+   The canvas is now full-bleed; the header, panels, toolbar and detail card all
+   FLOAT over it as rounded cards for a more modern look. */
+.app { position: relative; height: 100vh; --panel-w: 232px; }
 
+/* Floating header card — no longer a full-width bar touching the edges. */
 .app-header {
-  display: flex; align-items: baseline; gap: 16px;
-  padding: 14px 22px; background: var(--panel-bg);
-  border-bottom: 1px solid var(--border); z-index: 5;
+  position: absolute; top: 16px; left: 16px; right: 16px; z-index: 8;
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 18px; background: var(--panel-bg);
+  border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: var(--shadow);
 }
 .app-header h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
 .app-header .sub { color: var(--ink-soft); font-size: 13px; }
-.app-header .tags { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.app-header .tags { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 .app-header .tag {
-  font-size: 11px; color: var(--ink-soft);
-  background: var(--neutral-soft); border-radius: 20px; padding: 3px 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; line-height: 1;
+  border-radius: 20px; padding: 6px 12px;
+  border: 1px solid transparent;
 }
+.app-header .tag .tag-ic { display: inline-flex; line-height: 0; }
+.app-header .tag .tag-ic .lucide { width: 15px; height: 15px; }
+/* Color-code system: each tag tone gets its own tint + accent text/border. */
+.app-header .tag[data-tone="location"] { background: var(--police-soft); color: var(--police); border-color: color-mix(in srgb, var(--police) 25%, transparent); }
+.app-header .tag[data-tone="agency"]   { background: var(--data-soft);   color: var(--data);   border-color: color-mix(in srgb, var(--data) 25%, transparent); }
+.app-header .tag[data-tone="size"]     { background: var(--fire-soft);   color: var(--fire);   border-color: color-mix(in srgb, var(--fire) 25%, transparent); }
+.app-header .tag[data-tone="neutral"]  { background: var(--neutral-soft); color: var(--ink-soft); }
 
+/* Body fills the whole app; the canvas is full-bleed and everything floats. */
 .app-body {
-  position: relative; display: grid;
-  grid-template-columns: 1fr 232px; min-height: 0;
+  position: absolute; inset: 0; overflow: hidden;
 }
 
 /* ---- Canvas -------------------------------------------------------------- */
 .canvas-wrap {
-  position: relative; overflow: hidden;   /* pan/zoom replaces scrollbars */
+  position: absolute; inset: 0; overflow: hidden;   /* full-bleed, pan/zoom */
   touch-action: none;                      /* we handle wheel/drag ourselves */
   cursor: grab;
   background:
@@ -104,12 +120,15 @@ html, body {
     var(--canvas-bg);
 }
 .canvas-wrap.grabbing { cursor: grabbing; }
-/* The stage is authored in Figma pixels; JS pans/zooms it via transform. */
-.stage { position: relative; transform-origin: 0 0; will-change: transform; }
+/* The stage is authored in Figma pixels; JS pans/zooms it via transform.
+   No `will-change: transform` — that pinned the stage to a GPU layer rasterized
+   at 100% and then bitmap-scaled to fit, which made shapes/text look blurry.
+   Without it the browser re-rasterizes crisply at the current zoom. */
+.stage { position: relative; transform-origin: 0 0; }
 
 /* ---- Zoom / pan / fullscreen toolbar ------------------------------------- */
 .canvas-controls {
-  position: absolute; left: 14px; bottom: 14px; z-index: 6;
+  position: absolute; right: 14px; bottom: 14px; z-index: 6;
   display: flex; flex-direction: column; gap: 6px;
 }
 .ctrl-btn {
@@ -129,11 +148,12 @@ html, body {
 }
 .ctrl-lbl { white-space: nowrap; }
 
-/* Prominent tab to reopen the layers panel; only visible when collapsed. */
+/* Prominent tab to reopen the layers panel; only visible when collapsed.
+   Sits just below the floating header. */
 .layers-reopen {
-  position: absolute; top: 14px; right: 14px; z-index: 6; display: none;
+  position: absolute; top: 84px; right: 16px; z-index: 7; display: none;
   border: 1px solid var(--slate); background: var(--slate); color: #fff;
-  border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 600;
+  border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 600;
   cursor: pointer; box-shadow: var(--shadow); font-family: var(--font);
 }
 .layers-reopen:hover { filter: brightness(1.1); }
@@ -172,8 +192,21 @@ body.panel-collapsed .layers-reopen { display: block; }
 }
 .node:hover { transform: scale(1.05); filter: drop-shadow(var(--shadow-lift)); z-index: 3; }
 .node:focus-visible { outline: 3px solid #7aa7ff; outline-offset: 3px; }
+/* Selected shape: a colored ring (in the node's category color) + lift so it's
+   clear which node is open. Octagons use drop-shadow so the ring follows the
+   clip-path silhouette; circles/boxes use box-shadow for a clean even ring. */
+.node.selected { transform: scale(1.06); z-index: 4; }
+.node.circle.selected  { box-shadow: 0 0 0 4px var(--panel-bg), 0 0 0 7px var(--c); }
+.node.system.selected  { box-shadow: 0 0 0 3px var(--panel-bg), 0 0 0 6px var(--c); }
+.node.octagon.selected {
+  filter: drop-shadow(0 0 2px var(--c)) drop-shadow(0 0 2px var(--c))
+          drop-shadow(0 0 1px var(--c));
+}
 .node .lbl { line-height: 1.15; font-weight: 500; }
-.node .ic  { font-size: 30px; line-height: 1; }
+.node .ic  { display: inline-flex; line-height: 0; margin-bottom: 2px; }
+.node .ic .lucide { width: 32px; height: 32px; }
+/* Icons inherit currentColor — octagons are dark-on-light so use the ink color. */
+.lucide { display: inline-block; vertical-align: middle; }
 
 /* circle roles — solid slate, white text (Figma) */
 .node.circle {
@@ -210,10 +243,13 @@ body.panel-collapsed .layers-reopen { display: block; }
 .pill.flowlabel    { background: var(--paper);  color: var(--ink); }
 .pill.annotation   { color: var(--ink-soft); font-style: italic; background: transparent; }
 
-/* ---- Layer panel --------------------------------------------------------- */
+/* ---- Layer panel (floating card, top-right under the header) ------------- */
 .layer-panel {
-  background: var(--panel-bg); border-left: 1px solid var(--border);
-  padding: 18px 18px 12px; display: flex; flex-direction: column; overflow-y: auto;
+  position: absolute; top: 84px; right: 16px; z-index: 7;
+  width: var(--panel-w); max-height: calc(100vh - 100px);
+  background: var(--panel-bg); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow);
+  padding: 16px 16px 12px; display: flex; flex-direction: column; overflow-y: auto;
 }
 .layer-panel-head {
   display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px;
@@ -229,8 +265,7 @@ body.panel-collapsed .layers-reopen { display: block; }
 }
 .panel-collapse:hover { background: var(--neutral-soft); border-color: var(--slate); }
 
-/* Collapsed: hide the panel entirely so the canvas spans full width. */
-body.panel-collapsed .app-body { grid-template-columns: 1fr; }
+/* Collapsed: hide the floating panel; the reopen tab brings it back. */
 body.panel-collapsed .layer-panel { display: none; }
 .layer-row {
   display: flex; align-items: center; gap: 10px;
@@ -256,24 +291,38 @@ body.panel-collapsed .layer-panel { display: none; }
 }
 .link-btn:hover { color: var(--ink); }
 
+/* Floats over the bottom-left of the canvas with generous padding around it. */
 .staff-card {
-  margin-top: 16px; padding: 12px; border: 1px solid var(--border);
-  border-radius: var(--radius); background: var(--neutral-soft);
+  position: absolute; left: 18px; bottom: 18px; z-index: 6;
+  max-width: 240px; padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--panel-bg); box-shadow: var(--shadow);
 }
+.staff-card:empty { display: none; }
 .staff-card h3 { margin: 0 0 6px; font-size: 12px; }
 .staff-card p { margin: 0 0 6px; font-size: 12.5px; }
 .staff-card ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); }
 
-/* ---- Detail panel -------------------------------------------------------- */
-.detail {
-  position: absolute; top: 0; right: 0; height: 100%; width: 380px; max-width: 90vw;
-  background: var(--panel-bg); border-left: 1px solid var(--border);
-  box-shadow: var(--shadow-lift);
-  transform: translateX(100%); transition: transform .22s ease;
-  z-index: 20; display: flex; flex-direction: column;
+/* ---- Detail card (floating) ---------------------------------------------- */
+/* A floating rounded card, not a docked sidebar. It sits to the LEFT of the
+   layers panel so the legend stays visible, and fades in (fade-in-fwd) rather
+   than sliding. Hidden by default; JS adds .open to show it. */
+@keyframes fade-in-fwd {
+  0%   { transform: translateZ(-80px); opacity: 0; }
+  100% { transform: translateZ(0);     opacity: 1; }
 }
-.detail.open { transform: translateX(0); }
-.detail-head { padding: 18px 20px; border-bottom: 1px solid var(--border); border-top: 4px solid var(--c); }
+.detail {
+  position: absolute; top: 84px; right: calc(var(--panel-w) + 32px);
+  width: 360px; max-width: calc(100vw - var(--panel-w) - 64px);
+  max-height: calc(100vh - 100px);
+  background: var(--panel-bg); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow-lift);
+  z-index: 20; display: none; flex-direction: column; overflow: hidden;
+}
+.detail.open { display: flex; animation: fade-in-fwd .28s cubic-bezier(.39,.575,.565,1) both; }
+/* When the layers panel is collapsed, dock the card near the right edge. */
+body.panel-collapsed .detail { right: 16px; max-width: calc(100vw - 32px); }
+.detail-head { padding: 18px 20px; border-bottom: 1px solid var(--border); border-top: 4px solid var(--c); border-radius: 14px 14px 0 0; }
 .detail-head .kicker { font-size: 12px; color: var(--c); font-weight: 700; }
 .detail-head h2 { margin: 4px 0 2px; font-size: 19px; }
 .detail-close {
@@ -301,10 +350,13 @@ body.panel-collapsed .layer-panel { display: none; }
 
 /* ---- Responsive ---------------------------------------------------------- */
 @media (max-width: 820px) {
-  .app-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-  .layer-panel { border-left: none; border-top: 1px solid var(--border); max-height: 40vh; }
-  body.panel-collapsed .app-body { grid-template-rows: 1fr; }
-  .app-header .tags { display: none; }
+  /* Narrow: the floating cards shrink and the detail card takes near-full width
+     so it stays readable; everything still floats over the full-bleed canvas. */
+  .layer-panel { width: 200px; max-height: calc(100vh - 160px); }
+  .detail, body.panel-collapsed .detail {
+    right: 12px; left: 12px; width: auto; max-width: none;
+  }
+  .app-header { flex-wrap: wrap; }
 }
   </style>
 </head>
@@ -342,6 +394,9 @@ body.panel-collapsed .layer-panel { display: none; }
         <button class="layers-reopen" id="layersReopen" title="Show the layers panel">
           ☰ Show Layers
         </button>
+
+        <!-- Staff distribution — floats over the bottom-left of the canvas -->
+        <div class="staff-card" id="staffCard"></div>
       </div>
 
       <!-- Layer panel -->
@@ -357,7 +412,6 @@ body.panel-collapsed .layer-panel { display: none; }
           <button class="link-btn" id="showAll">Show all</button>
           <button class="link-btn" id="hideAll">Hide all</button>
         </div>
-        <div class="staff-card" id="staffCard"></div>
       </aside>
 
       <!-- Detail panel (slides in from the right when a node is clicked) -->
@@ -434,10 +488,12 @@ window.DISPATCH_CENTER = {
     summary:
       "A combined 911 and non-emergency dispatch center handling call intake, " +
       "CAD entry, and separate fire/EMS and police dispatch workflows.",
+    // Header tags. Each can be a plain string or { label, tone, icon }.
+    // tone drives the color-code chip: location | agency | size | neutral.
     tags: [
-      "Location: Bellevue, WA",
-      "Consolidated Agency (call taking + police dispatch + fire dispatch)",
-      "US Medium-size center",
+      { label: "Bellevue, WA", tone: "location", icon: "map-pin" },
+      { label: "Consolidated Agency (call taking + police + fire dispatch)", tone: "agency", icon: "building" },
+      { label: "US Medium-size center", tone: "size", icon: "bar-chart" },
     ],
   },
 
@@ -648,24 +704,24 @@ window.DISPATCH_CENTER = {
 
     // Field resources (octagons)
     {
-      id: "patrol-1", type: "octagon", fill: "blue", icon: "👮",
+      id: "patrol-1", type: "octagon", fill: "blue", icon: "shield",
       label: "police on-duty/patrol",
       x: 1679.89, y: 236, w: 126.698, h: 126.698, category: "police", layers: ["resources"],
       detail: { subtitle: "Field resource", notes: ["Officers on duty / patrol, reached by radio."] },
     },
     {
-      id: "patrol-2", type: "octagon", fill: "blue", icon: "🚔",
+      id: "patrol-2", type: "octagon", fill: "blue", icon: "car",
       label: "police on-duty/patrol",
       x: 1807, y: 383, w: 126.698, h: 126.698, category: "police", layers: ["resources"],
       detail: { subtitle: "Field resource", notes: ["Officers on duty / patrol, reached by radio."] },
     },
     {
-      id: "res-fire", type: "octagon", fill: "blue", icon: "🔥", label: "fire resource(s)",
+      id: "res-fire", type: "octagon", fill: "blue", icon: "flame", label: "fire resource(s)",
       x: 776, y: 1028, w: 126.7, h: 126.7, category: "fire", layers: ["resources"],
       detail: { subtitle: "Field resource", notes: ["Fire units dispatched to the incident."] },
     },
     {
-      id: "res-ems", type: "octagon", fill: "blue", icon: "🚑", label: "ems resource(s)",
+      id: "res-ems", type: "octagon", fill: "blue", icon: "ambulance", label: "ems resource(s)",
       x: 909, y: 1028, w: 126.7, h: 126.7, category: "fire", layers: ["resources"],
       detail: { subtitle: "Field resource", notes: ["EMS / medical units dispatched to the incident."] },
     },
@@ -722,9 +778,42 @@ window.DISPATCH_CENTER = {
 var STAGE_W = 2002;
 var STAGE_H = 1303;
 
+/* Lucide icons (https://lucide.dev), inlined as SVG path data so they travel
+   inside the single-file bundle and stay crisp at any zoom. Stroke uses
+   currentColor, so each icon inherits the node/tag text color. Add a new icon
+   by pasting its inner paths here under a short name. */
+var LUCIDE = {
+  shield:     '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  car:        '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+  flame:      '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  ambulance:  '<path d="M10 10H6"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14"/><path d="M8 8v4"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
+  "map-pin":  '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  "building": '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+  "bar-chart":'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>'
+};
+
+/* Return an inline <svg> string for a Lucide icon name, or "" if unknown.
+   Falls back gracefully so an emoji or stray name won't break rendering. */
+function iconSvg(name, size) {
+  if (!name || !LUCIDE[name]) return "";
+  size = size || 24;
+  return '<svg class="lucide" viewBox="0 0 24 24" width="' + size + '" height="' + size +
+    '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true">' + LUCIDE[name] + "</svg>";
+}
+
 var Diagram = {
   data: null,
   onNodeClick: null,
+  _selectedEl: null,   // the currently selected node element (for the highlight)
+
+  /* Mark a node element as selected (adds the outline ring). Pass null to clear.
+     Clicking a node calls this; closing the detail card clears it. */
+  select: function (el) {
+    if (this._selectedEl) this._selectedEl.classList.remove("selected");
+    this._selectedEl = el || null;
+    if (this._selectedEl) this._selectedEl.classList.add("selected");
+  },
 
   // Pan/zoom state. scale = zoom factor; tx/ty = pan offset in screen px.
   scale: 1,
@@ -979,11 +1068,13 @@ var Diagram = {
       el.style.width = n.w + "px";
       el.style.height = n.h + "px";
       el.setAttribute("aria-label", n.label);
+      // n.icon is a Lucide icon name (e.g. "shield"); render it as inline SVG.
+      var ic = iconSvg(n.icon, 34);
       el.innerHTML =
-        (n.icon ? '<span class="ic">' + n.icon + "</span>" : "") +
+        (ic ? '<span class="ic">' + ic + "</span>" : "") +
         '<span class="lbl">' + esc(n.label) + "</span>";
       el.addEventListener("click", function () {
-        if (Diagram.onNodeClick) Diagram.onNodeClick(n);
+        if (Diagram.onNodeClick) Diagram.onNodeClick(n, el);
       });
       stage.appendChild(el);
     });
@@ -1108,8 +1199,23 @@ var Panels = {
 
 /* --- Detail panel --------------------------------------------------------- */
 var Detail = {
+  currentId: null,   // which node's detail is showing (for click-to-toggle)
+
+  /* Clicking a node opens its detail; clicking the SAME node again closes it.
+     Returns true if the card is now open, false if it was toggled closed. */
+  toggle: function (node) {
+    var el = document.getElementById("detail");
+    if (this.currentId === node.id && el.classList.contains("open")) {
+      this.close();
+      return false;
+    }
+    this.open(node);
+    return true;
+  },
+
   open: function (node) {
     var el = document.getElementById("detail");
+    this.currentId = node.id;
     el.dataset.cat = node.category || "neutral";
     var d = node.detail || {};
 
@@ -1145,6 +1251,9 @@ var Detail = {
 
   close: function () {
     document.getElementById("detail").classList.remove("open");
+    this.currentId = null;
+    // Clear the selected-shape highlight (× button, Escape, or re-click).
+    if (window.Diagram && Diagram.select) Diagram.select(null);
   },
 };
 
@@ -1174,15 +1283,26 @@ function escText(s) {
     [data.meta.location, data.meta.visitDate].filter(Boolean).join(" · ");
   var tagHost = document.getElementById("centerTags");
   (data.meta.tags || []).forEach(function (t) {
+    // A tag may be a plain string (legacy) or { label, tone, icon }.
+    var label = typeof t === "string" ? t : t.label;
+    var tone = typeof t === "string" ? "neutral" : (t.tone || "neutral");
+    var icon = typeof t === "string" ? "" : (t.icon || "");
     var s = document.createElement("span");
     s.className = "tag";
-    s.textContent = t;
+    s.dataset.tone = tone;
+    // icon is a Lucide name (e.g. "map-pin"); render inline SVG at tag size.
+    var ic = iconSvg(icon, 15);
+    s.innerHTML = (ic ? '<span class="tag-ic">' + ic + "</span>" : "") +
+      "<span>" + esc(label) + "</span>";
     tagHost.appendChild(s);
   });
   document.title = data.meta.name + " — Dispatch Workflow";
 
   // --- Diagram --------------------------------------------------------------
-  Diagram.render(data, function (node) { Detail.open(node); });
+  Diagram.render(data, function (node, el) {
+    var wasOpen = Detail.toggle(node);   // returns true if the card is now open
+    Diagram.select(wasOpen ? el : null); // highlight the selected shape, or clear
+  });
 
   // --- Layers ---------------------------------------------------------------
   Panels.initLayers(data, applyVisibility);

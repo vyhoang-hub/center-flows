@@ -85,8 +85,23 @@ var Panels = {
 
 /* --- Detail panel --------------------------------------------------------- */
 var Detail = {
+  currentId: null,   // which node's detail is showing (for click-to-toggle)
+
+  /* Clicking a node opens its detail; clicking the SAME node again closes it.
+     Returns true if the card is now open, false if it was toggled closed. */
+  toggle: function (node) {
+    var el = document.getElementById("detail");
+    if (this.currentId === node.id && el.classList.contains("open")) {
+      this.close();
+      return false;
+    }
+    this.open(node);
+    return true;
+  },
+
   open: function (node) {
     var el = document.getElementById("detail");
+    this.currentId = node.id;
     el.dataset.cat = node.category || "neutral";
     var d = node.detail || {};
 
@@ -122,6 +137,9 @@ var Detail = {
 
   close: function () {
     document.getElementById("detail").classList.remove("open");
+    this.currentId = null;
+    // Clear the selected-shape highlight (× button, Escape, or re-click).
+    if (window.Diagram && Diagram.select) Diagram.select(null);
   },
 };
 

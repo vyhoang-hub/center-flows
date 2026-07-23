@@ -8,31 +8,47 @@ html, body {
   margin: 0; height: 100%;
   font-family: var(--font);
   color: var(--ink); background: var(--bg);
+  overflow: hidden;                 /* no page scrollbars; the canvas pans instead */
 }
 
-.app { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+/* --panel-w = width of the right-hand layers card.
+   The canvas is now full-bleed; the header, panels, toolbar and detail card all
+   FLOAT over it as rounded cards for a more modern look. */
+.app { position: relative; height: 100vh; --panel-w: 232px; }
 
+/* Floating header card — no longer a full-width bar touching the edges. */
 .app-header {
-  display: flex; align-items: baseline; gap: 16px;
-  padding: 14px 22px; background: var(--panel-bg);
-  border-bottom: 1px solid var(--border); z-index: 5;
+  position: absolute; top: 16px; left: 16px; right: 16px; z-index: 8;
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 18px; background: var(--panel-bg);
+  border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: var(--shadow);
 }
 .app-header h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
 .app-header .sub { color: var(--ink-soft); font-size: 13px; }
-.app-header .tags { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.app-header .tags { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 .app-header .tag {
-  font-size: 11px; color: var(--ink-soft);
-  background: var(--neutral-soft); border-radius: 20px; padding: 3px 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; line-height: 1;
+  border-radius: 20px; padding: 6px 12px;
+  border: 1px solid transparent;
 }
+.app-header .tag .tag-ic { display: inline-flex; line-height: 0; }
+.app-header .tag .tag-ic .lucide { width: 15px; height: 15px; }
+/* Color-code system: each tag tone gets its own tint + accent text/border. */
+.app-header .tag[data-tone="location"] { background: var(--police-soft); color: var(--police); border-color: color-mix(in srgb, var(--police) 25%, transparent); }
+.app-header .tag[data-tone="agency"]   { background: var(--data-soft);   color: var(--data);   border-color: color-mix(in srgb, var(--data) 25%, transparent); }
+.app-header .tag[data-tone="size"]     { background: var(--fire-soft);   color: var(--fire);   border-color: color-mix(in srgb, var(--fire) 25%, transparent); }
+.app-header .tag[data-tone="neutral"]  { background: var(--neutral-soft); color: var(--ink-soft); }
 
+/* Body fills the whole app; the canvas is full-bleed and everything floats. */
 .app-body {
-  position: relative; display: grid;
-  grid-template-columns: 1fr 232px; min-height: 0;
+  position: absolute; inset: 0; overflow: hidden;
 }
 
 /* ---- Canvas -------------------------------------------------------------- */
 .canvas-wrap {
-  position: relative; overflow: hidden;   /* pan/zoom replaces scrollbars */
+  position: absolute; inset: 0; overflow: hidden;   /* full-bleed, pan/zoom */
   touch-action: none;                      /* we handle wheel/drag ourselves */
   cursor: grab;
   background:
@@ -41,12 +57,15 @@ html, body {
     var(--canvas-bg);
 }
 .canvas-wrap.grabbing { cursor: grabbing; }
-/* The stage is authored in Figma pixels; JS pans/zooms it via transform. */
-.stage { position: relative; transform-origin: 0 0; will-change: transform; }
+/* The stage is authored in Figma pixels; JS pans/zooms it via transform.
+   No `will-change: transform` — that pinned the stage to a GPU layer rasterized
+   at 100% and then bitmap-scaled to fit, which made shapes/text look blurry.
+   Without it the browser re-rasterizes crisply at the current zoom. */
+.stage { position: relative; transform-origin: 0 0; }
 
 /* ---- Zoom / pan / fullscreen toolbar ------------------------------------- */
 .canvas-controls {
-  position: absolute; left: 14px; bottom: 14px; z-index: 6;
+  position: absolute; right: 14px; bottom: 14px; z-index: 6;
   display: flex; flex-direction: column; gap: 6px;
 }
 .ctrl-btn {
@@ -66,11 +85,12 @@ html, body {
 }
 .ctrl-lbl { white-space: nowrap; }
 
-/* Prominent tab to reopen the layers panel; only visible when collapsed. */
+/* Prominent tab to reopen the layers panel; only visible when collapsed.
+   Sits just below the floating header. */
 .layers-reopen {
-  position: absolute; top: 14px; right: 14px; z-index: 6; display: none;
+  position: absolute; top: 84px; right: 16px; z-index: 7; display: none;
   border: 1px solid var(--slate); background: var(--slate); color: #fff;
-  border-radius: 8px; padding: 9px 14px; font-size: 13px; font-weight: 600;
+  border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 600;
   cursor: pointer; box-shadow: var(--shadow); font-family: var(--font);
 }
 .layers-reopen:hover { filter: brightness(1.1); }
@@ -109,8 +129,21 @@ body.panel-collapsed .layers-reopen { display: block; }
 }
 .node:hover { transform: scale(1.05); filter: drop-shadow(var(--shadow-lift)); z-index: 3; }
 .node:focus-visible { outline: 3px solid #7aa7ff; outline-offset: 3px; }
+/* Selected shape: a colored ring (in the node's category color) + lift so it's
+   clear which node is open. Octagons use drop-shadow so the ring follows the
+   clip-path silhouette; circles/boxes use box-shadow for a clean even ring. */
+.node.selected { transform: scale(1.06); z-index: 4; }
+.node.circle.selected  { box-shadow: 0 0 0 4px var(--panel-bg), 0 0 0 7px var(--c); }
+.node.system.selected  { box-shadow: 0 0 0 3px var(--panel-bg), 0 0 0 6px var(--c); }
+.node.octagon.selected {
+  filter: drop-shadow(0 0 2px var(--c)) drop-shadow(0 0 2px var(--c))
+          drop-shadow(0 0 1px var(--c));
+}
 .node .lbl { line-height: 1.15; font-weight: 500; }
-.node .ic  { font-size: 30px; line-height: 1; }
+.node .ic  { display: inline-flex; line-height: 0; margin-bottom: 2px; }
+.node .ic .lucide { width: 32px; height: 32px; }
+/* Icons inherit currentColor — octagons are dark-on-light so use the ink color. */
+.lucide { display: inline-block; vertical-align: middle; }
 
 /* circle roles — solid slate, white text (Figma) */
 .node.circle {
@@ -147,10 +180,13 @@ body.panel-collapsed .layers-reopen { display: block; }
 .pill.flowlabel    { background: var(--paper);  color: var(--ink); }
 .pill.annotation   { color: var(--ink-soft); font-style: italic; background: transparent; }
 
-/* ---- Layer panel --------------------------------------------------------- */
+/* ---- Layer panel (floating card, top-right under the header) ------------- */
 .layer-panel {
-  background: var(--panel-bg); border-left: 1px solid var(--border);
-  padding: 18px 18px 12px; display: flex; flex-direction: column; overflow-y: auto;
+  position: absolute; top: 84px; right: 16px; z-index: 7;
+  width: var(--panel-w); max-height: calc(100vh - 100px);
+  background: var(--panel-bg); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow);
+  padding: 16px 16px 12px; display: flex; flex-direction: column; overflow-y: auto;
 }
 .layer-panel-head {
   display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px;
@@ -166,8 +202,7 @@ body.panel-collapsed .layers-reopen { display: block; }
 }
 .panel-collapse:hover { background: var(--neutral-soft); border-color: var(--slate); }
 
-/* Collapsed: hide the panel entirely so the canvas spans full width. */
-body.panel-collapsed .app-body { grid-template-columns: 1fr; }
+/* Collapsed: hide the floating panel; the reopen tab brings it back. */
 body.panel-collapsed .layer-panel { display: none; }
 .layer-row {
   display: flex; align-items: center; gap: 10px;
@@ -193,24 +228,38 @@ body.panel-collapsed .layer-panel { display: none; }
 }
 .link-btn:hover { color: var(--ink); }
 
+/* Floats over the bottom-left of the canvas with generous padding around it. */
 .staff-card {
-  margin-top: 16px; padding: 12px; border: 1px solid var(--border);
-  border-radius: var(--radius); background: var(--neutral-soft);
+  position: absolute; left: 18px; bottom: 18px; z-index: 6;
+  max-width: 240px; padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--panel-bg); box-shadow: var(--shadow);
 }
+.staff-card:empty { display: none; }
 .staff-card h3 { margin: 0 0 6px; font-size: 12px; }
 .staff-card p { margin: 0 0 6px; font-size: 12.5px; }
 .staff-card ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); }
 
-/* ---- Detail panel -------------------------------------------------------- */
-.detail {
-  position: absolute; top: 0; right: 0; height: 100%; width: 380px; max-width: 90vw;
-  background: var(--panel-bg); border-left: 1px solid var(--border);
-  box-shadow: var(--shadow-lift);
-  transform: translateX(100%); transition: transform .22s ease;
-  z-index: 20; display: flex; flex-direction: column;
+/* ---- Detail card (floating) ---------------------------------------------- */
+/* A floating rounded card, not a docked sidebar. It sits to the LEFT of the
+   layers panel so the legend stays visible, and fades in (fade-in-fwd) rather
+   than sliding. Hidden by default; JS adds .open to show it. */
+@keyframes fade-in-fwd {
+  0%   { transform: translateZ(-80px); opacity: 0; }
+  100% { transform: translateZ(0);     opacity: 1; }
 }
-.detail.open { transform: translateX(0); }
-.detail-head { padding: 18px 20px; border-bottom: 1px solid var(--border); border-top: 4px solid var(--c); }
+.detail {
+  position: absolute; top: 84px; right: calc(var(--panel-w) + 32px);
+  width: 360px; max-width: calc(100vw - var(--panel-w) - 64px);
+  max-height: calc(100vh - 100px);
+  background: var(--panel-bg); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow-lift);
+  z-index: 20; display: none; flex-direction: column; overflow: hidden;
+}
+.detail.open { display: flex; animation: fade-in-fwd .28s cubic-bezier(.39,.575,.565,1) both; }
+/* When the layers panel is collapsed, dock the card near the right edge. */
+body.panel-collapsed .detail { right: 16px; max-width: calc(100vw - 32px); }
+.detail-head { padding: 18px 20px; border-bottom: 1px solid var(--border); border-top: 4px solid var(--c); border-radius: 14px 14px 0 0; }
 .detail-head .kicker { font-size: 12px; color: var(--c); font-weight: 700; }
 .detail-head h2 { margin: 4px 0 2px; font-size: 19px; }
 .detail-close {
@@ -238,8 +287,11 @@ body.panel-collapsed .layer-panel { display: none; }
 
 /* ---- Responsive ---------------------------------------------------------- */
 @media (max-width: 820px) {
-  .app-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-  .layer-panel { border-left: none; border-top: 1px solid var(--border); max-height: 40vh; }
-  body.panel-collapsed .app-body { grid-template-rows: 1fr; }
-  .app-header .tags { display: none; }
+  /* Narrow: the floating cards shrink and the detail card takes near-full width
+     so it stays readable; everything still floats over the full-bleed canvas. */
+  .layer-panel { width: 200px; max-height: calc(100vh - 160px); }
+  .detail, body.panel-collapsed .detail {
+    right: 12px; left: 12px; width: auto; max-width: none;
+  }
+  .app-header { flex-wrap: wrap; }
 }
