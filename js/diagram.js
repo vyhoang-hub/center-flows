@@ -154,7 +154,7 @@ var Diagram = {
     // didn't land on a node/button (so clicking a node still opens its panel).
     var panning = false, sx = 0, sy = 0, startTx = 0, startTy = 0, moved = false;
     wrap.addEventListener("pointerdown", function (e) {
-      if (e.target.closest(".node, .ctrl-btn, .layers-reopen")) return;
+      if (e.target.closest(".node, .ctrl-btn, .layers-reopen, .staff-card")) return;
       panning = true; moved = false;
       sx = e.clientX; sy = e.clientY; startTx = Diagram.tx; startTy = Diagram.ty;
       wrap.classList.add("grabbing");

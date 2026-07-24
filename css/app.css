@@ -150,10 +150,9 @@ body.panel-collapsed .layers-reopen { display: block; }
 .node.selected { transform: scale(1.06); z-index: 4; }
 .node.circle.selected  { box-shadow: 0 0 0 4px var(--panel-bg), 0 0 0 7px var(--c); }
 .node.system.selected  { box-shadow: 0 0 0 3px var(--panel-bg), 0 0 0 6px var(--c); }
-/* Resource nodes have a soft glow already; on select, ring the glow blob. */
-.node.resource.selected .node-glow {
-  filter: drop-shadow(0 0 3px var(--c)) drop-shadow(0 0 2px var(--c));
-}
+/* Resource nodes use the SAME outline-ring style as the others (a clean round
+   ring), not a blurry glow — so selection reads consistently across shapes. */
+.node.resource.selected { border-radius: 50%; box-shadow: 0 0 0 4px var(--panel-bg), 0 0 0 7px var(--c); }
 .node .lbl { line-height: 1.15; font-weight: 700; }
 .node .ic  { display: inline-flex; line-height: 0; margin-bottom: 2px; }
 .node .ic .lucide { width: 32px; height: 32px; }
@@ -261,17 +260,64 @@ body.panel-collapsed .layer-panel { display: none; }
 }
 .link-btn:hover { color: var(--ink); }
 
-/* Floats over the bottom-left of the canvas with generous padding around it. */
+/* "About this center" — floats over the bottom-left of the canvas. Collapsible
+   parent card with child sections (staff distribution, observations & notes). */
 .staff-card {
   position: absolute; left: 18px; bottom: 18px; z-index: 6;
-  max-width: 240px; padding: 14px 16px;
+  width: 270px; max-height: calc(100vh - 120px); overflow-y: auto;
   border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--panel-bg); box-shadow: var(--shadow);
+  /* Toggle sits at the BOTTOM (footer). Card is bottom-anchored, so collapsing
+     just tucks the body away and the footer stays put — a calm, non-jumpy feel. */
+  display: flex; flex-direction: column;
 }
 .staff-card:empty { display: none; }
-.staff-card h3 { margin: 0 0 6px; font-size: 12px; }
-.staff-card p { margin: 0 0 6px; font-size: 12.5px; }
-.staff-card ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); }
+.about-body { order: 1; padding: 16px 16px 4px; }
+.about-head { order: 2; }
+.staff-card.collapsed .about-body { display: none; }
+/* Footer toggle. */
+.about-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 11px 16px; border: none; border-top: 1px solid var(--border);
+  background: none; cursor: pointer;
+  font-family: var(--font); font-size: 13px; font-weight: 700; color: var(--ink);
+  text-align: left; border-radius: 0 0 var(--radius) var(--radius);
+}
+/* When collapsed the footer is the whole card, so round all corners + drop the divider. */
+.staff-card.collapsed .about-head { border-top: none; border-radius: var(--radius); }
+.about-head:hover { background: var(--neutral-soft); }
+/* Caret points up when expanded (body above), down when collapsed (click to open up). */
+.about-caret { color: var(--ink-soft); transition: transform .15s ease; transform: rotate(180deg); }
+.staff-card.collapsed .about-caret { transform: rotate(0deg); }
+.about-section + .about-section {
+  margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);
+}
+.about-section h4 {
+  margin: 0 0 8px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.about-section p { margin: 0 0 8px; font-size: 12.5px; line-height: 1.45; }
+.about-section ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); }
+.about-section li { margin-bottom: 6px; line-height: 1.45; }
+.about-section li:last-child { margin-bottom: 0; }
+/* Nested sub-items (e.g. the individual alert tones) get a bit more breathing room. */
+.about-section li > ul { margin-top: 6px; }
+
+/* Center tags moved out of the header into the top of this card. */
+.about-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Tags are the first section — no top border/margin, but space below. */
+.about-tags.about-section + .about-section { margin-top: 14px; padding-top: 14px; }
+.about-tags .tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; line-height: 1;
+  border-radius: 20px; padding: 5px 10px; border: 1px solid transparent;
+}
+.about-tags .tag .tag-ic { display: inline-flex; line-height: 0; }
+.about-tags .tag .tag-ic .lucide { width: 14px; height: 14px; }
+.about-tags .tag[data-tone="location"] { background: var(--police-soft); color: var(--police); border-color: color-mix(in srgb, var(--police) 25%, transparent); }
+.about-tags .tag[data-tone="agency"]   { background: var(--data-soft);   color: var(--data);   border-color: color-mix(in srgb, var(--data) 25%, transparent); }
+.about-tags .tag[data-tone="size"]     { background: var(--fire-soft);   color: var(--fire);   border-color: color-mix(in srgb, var(--fire) 25%, transparent); }
+.about-tags .tag[data-tone="neutral"]  { background: var(--neutral-soft); color: var(--ink-soft); }
 
 /* ---- Detail card (floating) ---------------------------------------------- */
 /* A floating rounded card, not a docked sidebar. It sits to the LEFT of the

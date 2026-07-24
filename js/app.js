@@ -16,21 +16,8 @@
   document.getElementById("centerName").textContent = data.meta.name;
   document.getElementById("centerSub").textContent =
     [data.meta.location, data.meta.visitDate].filter(Boolean).join(" · ");
-  var tagHost = document.getElementById("centerTags");
-  (data.meta.tags || []).forEach(function (t) {
-    // A tag may be a plain string (legacy) or { label, tone, icon }.
-    var label = typeof t === "string" ? t : t.label;
-    var tone = typeof t === "string" ? "neutral" : (t.tone || "neutral");
-    var icon = typeof t === "string" ? "" : (t.icon || "");
-    var s = document.createElement("span");
-    s.className = "tag";
-    s.dataset.tone = tone;
-    // icon is a Lucide name (e.g. "map-pin"); render inline SVG at tag size.
-    var ic = iconSvg(icon, 15);
-    s.innerHTML = (ic ? '<span class="tag-ic">' + ic + "</span>" : "") +
-      "<span>" + esc(label) + "</span>";
-    tagHost.appendChild(s);
-  });
+  // meta.tags are now rendered inside the "About this center" card (see
+  // panels.js), not in the header — so the header stays clean.
   document.title = data.meta.name + " — Dispatch Workflow";
 
   // --- Diagram --------------------------------------------------------------

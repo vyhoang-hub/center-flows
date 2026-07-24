@@ -370,10 +370,33 @@ window.DISPATCH_CENTER = {
     },
   ],
 
-  // ---- Staff distribution (floating card) -----------------------------------
-  staff: {
+  // ---- About this center (floating, collapsible card) -----------------------
+  // Parent card with child sections. Staff distribution is now one section
+  // alongside observations & notes from the site visit.
+  about: {
     layers: ["annotations"],
-    summary: "9–12 people on the floor per shift",
-    breakdown: ["1–3 call takers", "2–4 police dispatchers", "2–3 fire dispatchers"],
+    title: "About this center",
+    sections: [
+      {
+        heading: "Staff distribution",
+        text: "9–12 people on the floor per shift",
+        items: ["1–3 call takers", "2–4 police dispatchers", "2–3 fire dispatchers"],
+      },
+      {
+        heading: "Observations & notes",
+        items: [
+          {
+            text: "Distinct alert tones play on the floor to flag urgent " +
+              "situations to the telecommunicators:",
+            children: [
+              "Hooting tone (owl-like) — a Priority 1 incident is in progress, " +
+                "meaning one that involves a weapon.",
+              "Bird-chirping tone — a police call has been waiting 20 minutes " +
+                "with no PD responder assigned to it yet.",
+            ],
+          },
+        ],
+      },
+    ],
   },
 };

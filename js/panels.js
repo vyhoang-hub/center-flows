@@ -33,16 +33,68 @@ var Panels = {
       host.appendChild(row);
     });
 
-    // Staff distribution annotation card
-    if (data.staff) {
+    // "About this center" card — collapsible, with child sections (staff
+    // distribution, observations & notes). Falls back to the old `staff` shape.
+    var about = data.about;
+    if (!about && data.staff) {
+      about = {
+        layers: data.staff.layers,
+        title: "About this center",
+        sections: [{
+          heading: "Staff distribution",
+          text: data.staff.summary,
+          items: data.staff.breakdown || [],
+        }],
+      };
+    }
+    if (about) {
       var card = document.getElementById("staffCard");
-      card.dataset.layers = (data.staff.layers || []).join(",");
+      card.dataset.layers = (about.layers || []).join(",");
+
+      // Render a list item, which may itself carry nested `children`.
+      function renderItem(i) {
+        if (typeof i === "string") return "<li>" + escText(i) + "</li>";
+        var kids = i.children && i.children.length
+          ? "<ul>" + i.children.map(renderItem).join("") + "</ul>" : "";
+        return "<li>" + escText(i.text || "") + kids + "</li>";
+      }
+
+      // The center's meta.tags become the first section (moved out of the header).
+      var tags = (data.meta && data.meta.tags) || [];
+      var tagsHtml = tags.length
+        ? '<div class="about-section about-tags">' +
+            tags.map(function (t) {
+              var label = typeof t === "string" ? t : t.label;
+              var tone = typeof t === "string" ? "neutral" : (t.tone || "neutral");
+              var icon = typeof t === "string" ? "" : (t.icon || "");
+              var ic = (typeof iconSvg === "function") ? iconSvg(icon, 15) : "";
+              return '<span class="tag" data-tone="' + tone + '">' +
+                (ic ? '<span class="tag-ic">' + ic + "</span>" : "") +
+                "<span>" + escText(label) + "</span></span>";
+            }).join("") +
+          "</div>"
+        : "";
+
+      var body = tagsHtml + (about.sections || []).map(function (s) {
+        return '<div class="about-section">' +
+          (s.heading ? "<h4>" + escText(s.heading) + "</h4>" : "") +
+          (s.text ? "<p>" + escText(s.text) + "</p>" : "") +
+          (s.items && s.items.length
+            ? "<ul>" + s.items.map(renderItem).join("") + "</ul>"
+            : "") +
+          "</div>";
+      }).join("");
       card.innerHTML =
-        "<h3>Staff distribution</h3>" +
-        "<p>" + escText(data.staff.summary) + "</p>" +
-        "<ul>" + (data.staff.breakdown || []).map(function (b) {
-          return "<li>" + escText(b) + "</li>";
-        }).join("") + "</ul>";
+        '<button class="about-head" id="aboutToggle" aria-expanded="true">' +
+          "<span>" + escText(about.title || "About this center") + "</span>" +
+          '<span class="about-caret" aria-hidden="true">▾</span>' +
+        "</button>" +
+        '<div class="about-body" id="aboutBody">' + body + "</div>";
+      // Collapse / expand.
+      card.querySelector("#aboutToggle").addEventListener("click", function () {
+        var collapsed = card.classList.toggle("collapsed");
+        this.setAttribute("aria-expanded", String(!collapsed));
+      });
     }
 
     document.getElementById("showAll").addEventListener("click", function () { Panels.setAll(true); });
