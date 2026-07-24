@@ -11,12 +11,7 @@
 - [ ] Fix the alignment of the cards on the home page
 -->
 
-- The telephone line connecting the 911 to call department is not right. Please review the the Figma and fix that.
-- The communication line from supervisor to police is missing.
-- The placement of the department names are slight off center.
-- (1-3 call receiver) needs to be centered in that container
-
-Please ask questions if you have any.
+_(nothing pending — the 4 items here were done in Rounds 15–16)_
 
 ---
 
