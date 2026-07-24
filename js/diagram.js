@@ -5,7 +5,7 @@
  * Figma coordinate space (2002 x 1303) and the whole stage is scaled to fit.
  * ========================================================================== */
 
-var STAGE_W = 2002;
+var STAGE_W = 2210;
 var STAGE_H = 1303;
 
 /* Lucide icons (https://lucide.dev), inlined as SVG path data so they travel
@@ -19,7 +19,10 @@ var LUCIDE = {
   ambulance:  '<path d="M10 10H6"/><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14"/><path d="M8 8v4"/><path d="M9 18h6"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/>',
   "map-pin":  '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
   "building": '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
-  "bar-chart":'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>'
+  "bar-chart":'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  radio:      '<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>',
+  phone:      '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  "message":  '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>'
 };
 
 /* Return an inline <svg> string for a Lucide icon name, or "" if unknown.
@@ -61,14 +64,16 @@ var Diagram = {
     stage.style.height = STAGE_H + "px";
     stage.innerHTML = "";
 
-    // Draw order = stacking order. Zones sit at the very back, then the two
-    // ways of drawing lines (exported Figma SVGs and data-driven edges), then
-    // the nodes and pills on top.
+    // Draw order = stacking order. Regions (e.g. the "inside the center" blob)
+    // sit at the very back, then zones, then the two ways of drawing lines
+    // (exported Figma SVGs and data-driven edges), then nodes and pills on top.
+    this._renderRegions(stage, data.regions || []);
     this._renderZones(stage, data.zones || []);
     this._renderConnectors(stage, data.connectors || []);
     this._renderEdges(stage, data.edges || [], data.nodes || []);
     this._renderNodes(stage, data.nodes || []);
     this._renderPills(stage, data.pills || []);
+    this._renderAnnotations(stage, data.annotations || []);
 
     this._initInteractions();
     this.fit();
@@ -172,6 +177,59 @@ var Diagram = {
     wrap.addEventListener("pointercancel", endPan);
   },
 
+  /* Regions — large soft background shapes that group the whole workflow
+     (e.g. the "inside the center" blob). Each is an absolutely-positioned SVG
+     drawn behind everything, with an optional label chip.
+       x/y/w/h : top-left + size in stage units
+       asset   : an SVG in /assets (or inlined via ASSET_MAP), drawn to fill
+       fill    : background color if no asset is given
+       label / labelX / labelY : optional caption placed at absolute stage coords */
+  _renderRegions: function (stage, regions) {
+    regions.forEach(function (r) {
+      var el = document.createElement("div");
+      el.className = "region";
+      el.dataset.layers = (r.layers || []).join(",");
+      el.style.left = r.x + "px";
+      el.style.top = r.y + "px";
+      el.style.width = r.w + "px";
+      el.style.height = r.h + "px";
+      if (r.asset) {
+        var img = document.createElement("img");
+        img.src = assetSrc(r.asset);
+        img.alt = "";
+        el.appendChild(img);
+      } else if (r.fill) {
+        el.style.background = r.fill;
+      }
+      stage.appendChild(el);
+
+      if (r.label) {
+        var tag = document.createElement("span");
+        tag.className = "region-label";
+        tag.textContent = r.label;
+        tag.style.left = (r.labelX != null ? r.labelX : r.x + 24) + "px";
+        tag.style.top = (r.labelY != null ? r.labelY : r.y + 20) + "px";
+        tag.dataset.layers = (r.layers || []).join(",");
+        stage.appendChild(tag);
+      }
+    });
+  },
+
+  /* Annotations — free italic narrative notes placed at absolute stage coords
+     (the flow story: "call -> incident...", etc.). Pure data, no SVG. */
+  _renderAnnotations: function (stage, annotations) {
+    annotations.forEach(function (a) {
+      var el = document.createElement("div");
+      el.className = "annotation-note";
+      el.dataset.layers = (a.layers || ["annotations"]).join(",");
+      el.style.left = a.x + "px";
+      el.style.top = a.y + "px";
+      if (a.w) el.style.width = a.w + "px";
+      el.textContent = a.text;
+      stage.appendChild(el);
+    });
+  },
+
   /* Zones — big grouping outlines (e.g. CALL / POLICE / FIRE) drawn from data,
      no SVG export needed. A dashed rounded rectangle with a small label chip.
      x/y is the TOP-LEFT of the zone in stage units. */
@@ -201,7 +259,8 @@ var Diagram = {
      units perpendicular to the line, and an arrowhead is drawn at the `to` end.
        from / to : node ids            style : "solid" | "dashed"
        color     : comm | flow | neutral   curve : bend amount (+/-), 0 = straight
-       arrow     : true (default) | false */
+       arrow     : true (default, arrow at `to`) | false (none)
+                 | "both" (arrowheads on BOTH ends) | "start" (at `from` only) */
   _renderEdges: function (stage, edges, nodes) {
     if (!edges.length) return;
     var byId = {};
@@ -249,20 +308,28 @@ var Diagram = {
       g.dataset.layers = (e.layers || []).join(",");
       g.appendChild(path);
 
-      // Arrowhead at the `to` end, aimed along the tangent (control -> end).
-      if (e.arrow !== false) {
-        var ang = Math.atan2(p2.y - cy, p2.x - cx);
-        var size = 9;
-        var tip = p2, r = (b.w || 0) / 2;
-        // Pull the tip back to the node's edge so it doesn't hide under the node.
-        var back = { x: p2.x - Math.cos(ang) * r, y: p2.y - Math.sin(ang) * r };
-        tip = back;
+      // Draw a filled triangular arrowhead pointing toward `end`, along the
+      // given tangent angle, pulled back by the target node's radius so it sits
+      // at the node edge instead of hiding under it.
+      function addHead(end, ang, nodeW) {
+        var size = 9, r = (nodeW || 0) / 2;
+        var tip = { x: end.x - Math.cos(ang) * r, y: end.y - Math.sin(ang) * r };
         var left = { x: tip.x - size * Math.cos(ang - 0.5), y: tip.y - size * Math.sin(ang - 0.5) };
         var right = { x: tip.x - size * Math.cos(ang + 0.5), y: tip.y - size * Math.sin(ang + 0.5) };
         var head = document.createElementNS("http://www.w3.org/2000/svg", "path");
         head.setAttribute("d", "M " + tip.x + " " + tip.y + " L " + left.x + " " + left.y + " L " + right.x + " " + right.y + " Z");
         head.setAttribute("fill", stroke);
         g.appendChild(head);
+      }
+
+      // Arrowheads. Tangent at the `to` end points control->end; at the `from`
+      // end it points control->start. "both" draws one on each end.
+      var arrow = e.arrow === undefined ? true : e.arrow;
+      if (arrow === true || arrow === "both") {
+        addHead(p2, Math.atan2(p2.y - cy, p2.x - cx), b.w); // at `to`
+      }
+      if (arrow === "start" || arrow === "both") {
+        addHead(p1, Math.atan2(p1.y - cy, p1.x - cx), a.w); // at `from`
       }
       svg.appendChild(g);
     });
@@ -298,11 +365,21 @@ var Diagram = {
       el.style.width = n.w + "px";
       el.style.height = n.h + "px";
       el.setAttribute("aria-label", n.label);
-      // n.icon is a Lucide icon name (e.g. "shield"); render it as inline SVG.
-      var ic = iconSvg(n.icon, 34);
-      el.innerHTML =
-        (ic ? '<span class="ic">' + ic + "</span>" : "") +
-        '<span class="lbl">' + esc(n.label) + "</span>";
+      // Icon: an exported SVG asset (n.iconAsset, e.g. a Phosphor icon from
+      // Figma) takes priority; otherwise a Lucide name (n.icon) is inlined.
+      var icHtml = "";
+      if (n.iconAsset) {
+        icHtml = '<span class="ic"><img class="ic-img" src="' +
+          assetSrc(n.iconAsset) + '" alt=""></span>';
+      } else if (n.icon) {
+        var ic = iconSvg(n.icon, 34);
+        if (ic) icHtml = '<span class="ic">' + ic + "</span>";
+      }
+      // Optional soft glow shape behind the node (resource blobs from Figma).
+      var glowHtml = n.glow
+        ? '<img class="node-glow" src="' + assetSrc(n.glow) + '" alt="">'
+        : "";
+      el.innerHTML = glowHtml + icHtml + '<span class="lbl">' + esc(n.label) + "</span>";
       el.addEventListener("click", function () {
         if (Diagram.onNodeClick) Diagram.onNodeClick(n, el);
       });
@@ -319,7 +396,21 @@ var Diagram = {
       el.style.top = p.y + "px";
       if (p.w) el.style.minWidth = p.w + "px";
       if (p.h) el.style.height = p.h + "px";
-      el.textContent = p.text;
+      // Optional leading icon: an exported SVG asset (p.iconAsset, e.g. a
+      // Phosphor icon from Figma) takes priority, else a Lucide name (p.icon).
+      var icHtml = "";
+      if (p.iconAsset) {
+        icHtml = '<img class="pill-ic-img" src="' + assetSrc(p.iconAsset) + '" alt="">';
+      } else if (p.icon) {
+        var ic = iconSvg(p.icon, 13);
+        if (ic) icHtml = '<span class="pill-ic">' + ic + "</span>";
+      }
+      if (icHtml) {
+        el.classList.add("has-icon");
+        el.innerHTML = icHtml + "<span>" + esc(p.text) + "</span>";
+      } else {
+        el.textContent = p.text;
+      }
       stage.appendChild(el);
     });
   },

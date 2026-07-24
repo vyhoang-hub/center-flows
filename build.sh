@@ -34,8 +34,10 @@ ASSET_JS="$(mktemp)"
 trap 'rm -f "$ASSET_JS"' EXIT
 echo "window.ASSET_MAP = {" > "$ASSET_JS"
 count=0
-# Pull the 40-char asset hashes out of the data file (connectors: asset: "...").
-for hash in $(grep -oE 'asset: "[a-f0-9]{40}"' "$DATA_FILE" | grep -oE '[a-f0-9]{40}' | sort -u); do
+# Pull every asset name out of the data file. Assets are referenced by several
+# keys: `asset` (connectors/regions), `glow` and `iconAsset` (resource nodes &
+# pills). Names are either 40-char Figma hashes or slugs like inside-center-blob.
+for hash in $(grep -oE '(asset|glow|iconAsset): "[A-Za-z0-9_-]+"' "$DATA_FILE" | grep -oE '"[A-Za-z0-9_-]+"' | tr -d '"' | sort -u); do
   svg="assets/$hash.svg"
   if [ ! -f "$svg" ]; then
     echo "  WARNING: referenced asset missing, skipping: $svg" >&2

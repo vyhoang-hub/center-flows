@@ -51,10 +51,7 @@ html, body {
   position: absolute; inset: 0; overflow: hidden;   /* full-bleed, pan/zoom */
   touch-action: none;                      /* we handle wheel/drag ourselves */
   cursor: grab;
-  background:
-    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 26px 26px,
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 26px 26px,
-    var(--canvas-bg);
+  background: var(--canvas-bg);            /* plain surface — no grid */
 }
 .canvas-wrap.grabbing { cursor: grabbing; }
 /* The stage is authored in Figma pixels; JS pans/zooms it via transform.
@@ -100,6 +97,24 @@ body.panel-collapsed .layers-reopen { display: block; }
 .connector { position: absolute; pointer-events: none; }
 .connector img { display: block; width: 100%; height: 100%; }
 
+/* Regions: large soft background groupings (e.g. the "inside the center" blob).
+   Behind everything; the blob SVG fills its box. */
+.region { position: absolute; pointer-events: none; z-index: 0; }
+.region img { display: block; width: 100%; height: 100%; }
+.region-label {
+  position: absolute; z-index: 0; pointer-events: none;
+  font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+  color: #c5c5c5; text-transform: uppercase; white-space: nowrap;
+}
+
+/* Annotations: free italic narrative notes (the flow story). Centered like
+   Figma (the note's x is its center), 11px, #454141. */
+.annotation-note {
+  position: absolute; z-index: 2; pointer-events: none;
+  font-size: 11px; font-style: italic; font-weight: 500; line-height: 1.3;
+  color: var(--ink-note); text-align: center; transform: translateX(-50%);
+}
+
 /* Zones: data-drawn grouping outlines (no SVG export needed). */
 .zone {
   position: absolute; pointer-events: none;
@@ -135,14 +150,14 @@ body.panel-collapsed .layers-reopen { display: block; }
 .node.selected { transform: scale(1.06); z-index: 4; }
 .node.circle.selected  { box-shadow: 0 0 0 4px var(--panel-bg), 0 0 0 7px var(--c); }
 .node.system.selected  { box-shadow: 0 0 0 3px var(--panel-bg), 0 0 0 6px var(--c); }
-.node.octagon.selected {
-  filter: drop-shadow(0 0 2px var(--c)) drop-shadow(0 0 2px var(--c))
-          drop-shadow(0 0 1px var(--c));
+/* Resource nodes have a soft glow already; on select, ring the glow blob. */
+.node.resource.selected .node-glow {
+  filter: drop-shadow(0 0 3px var(--c)) drop-shadow(0 0 2px var(--c));
 }
-.node .lbl { line-height: 1.15; font-weight: 500; }
+.node .lbl { line-height: 1.15; font-weight: 700; }
 .node .ic  { display: inline-flex; line-height: 0; margin-bottom: 2px; }
 .node .ic .lucide { width: 32px; height: 32px; }
-/* Icons inherit currentColor — octagons are dark-on-light so use the ink color. */
+.node .ic-img { width: 34px; height: 34px; display: block; }
 .lucide { display: inline-block; vertical-align: middle; }
 
 /* circle roles — solid slate, white text (Figma) */
@@ -151,18 +166,29 @@ body.panel-collapsed .layers-reopen { display: block; }
 }
 .node.circle .lbl { font-size: 12px; padding: 6px; }
 
-/* octagon field resources — light blue fill */
-.node.octagon {
-  background: var(--octagon); color: var(--ink);
-  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+/* Resource nodes — soft blurred glow blob (Figma SVG) with the Phosphor icon
+   centered and a bold dark label BELOW the blob (matches the design). The
+   button box is the blob's size; the label overflows beneath it. */
+.node.resource {
+  background: transparent; color: var(--ink); overflow: visible;
 }
-.node.octagon .lbl { font-size: 11px; padding: 2px 8px; }
+.node.resource .node-glow {
+  position: absolute; left: 50%; top: 50%;
+  width: 127%; height: 127%; transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 0;
+}
+.node.resource .ic { position: relative; z-index: 1; }
+.node.resource .lbl {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 2px; font-size: 13px; font-weight: 700;
+  color: var(--ink); white-space: nowrap; text-align: center;
+}
 
-/* system (CAD) boxes — sage, rounded */
+/* system (CAD) boxes — sage, rounded, white bold text */
 .node.system {
-  background: var(--sage); color: var(--ink); border-radius: 4px;
+  background: var(--sage); color: #fff; border-radius: 4px;
 }
-.node.system .lbl { font-size: 11px; padding: 8px; }
+.node.system .lbl { font-size: 11px; padding: 8px; font-weight: 700; }
 
 /* faded = a layer this node belongs to is off */
 .faded { opacity: .08 !important; pointer-events: none; }
@@ -173,12 +199,19 @@ body.panel-collapsed .layers-reopen { display: block; }
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; white-space: nowrap; pointer-events: none;
 }
-.pill.comm         { background: var(--pink);   color: #fff; border-radius: 4px; }
-.pill.c911         { background: var(--red);    color: #fff; border-radius: 22px; }
-.pill.nonemergency { background: var(--yellow); color: var(--ink); border-radius: 17px; }
-.pill.zonelabel    { background: var(--paper);  color: var(--ink); font-weight: 500; }
-.pill.flowlabel    { background: var(--paper);  color: var(--ink); }
-.pill.annotation   { color: var(--ink-soft); font-style: italic; background: transparent; }
+.pill.has-icon { gap: 4px; padding: 4px 8px; }
+.pill .pill-ic { display: inline-flex; line-height: 0; }
+.pill .pill-ic .lucide { width: 13px; height: 13px; }
+.pill .pill-ic-img { width: 16px; height: 16px; display: block; }
+.pill.comm         { background: var(--pink); color: #fff; font-weight: 700; }
+/* Intake tags: white fill, colored border + text (outline style, per Figma). */
+.pill.c911         { background: #fff; color: var(--red);    font-weight: 700; border: 1px solid var(--red);    border-radius: 22px; padding: 3px 12px; }
+.pill.nonemergency { background: #fff; color: var(--yellow); font-weight: 700; border: 1px solid var(--yellow); border-radius: 17px; padding: 3px 12px; }
+.pill.zonelabel    { background: var(--paper);  color: var(--tan-label); font-weight: 700; font-size: 13.5px; }
+.pill.flowlabel    { background: var(--paper);  color: var(--ink-note); font-style: italic; font-size: 11px; }
+/* Count annotations center on their x (like Figma) so they sit under the node
+   regardless of text width. min-width from `w` no longer shifts them sideways. */
+.pill.annotation   { color: var(--tan-label); font-style: italic; background: transparent; transform: translateX(-50%); min-width: 0 !important; }
 
 /* ---- Layer panel (floating card, top-right under the header) ------------- */
 .layer-panel {

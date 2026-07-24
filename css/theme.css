@@ -8,14 +8,16 @@
 :root {
   /* --- Exact Figma fills --------------------------------------------------- */
   --slate:      #354a57;   /* all role circles */
-  --octagon:    #c9d9e4;   /* field-resource octagons */
-  --sage:       #a4c5a4;   /* CAD / system boxes */
-  --pink:       #b866a3;   /* communication pills & dashed comm paths */
-  --red:        #c95548;   /* 911 pill */
-  --yellow:     #e2ce88;   /* non-emergency pill */
+  --octagon:    #c9d9e4;   /* field-resource octagons (legacy) */
+  --sage:       #6e936e;   /* CAD / system boxes (Figma #6E936E) */
+  --pink:       #b866a3;   /* communication pills & comm paths */
+  --red:        #c95548;   /* 911 outline pill (Figma #c95548) */
+  --yellow:     #c3ad61;   /* non-emergency outline pill (Figma #c3ad61) */
   --tan:        #c7c0b8;   /* dashed zone outlines */
-  --flow:       #6b7280;   /* solid incident-flow lines */
-  --paper:      #fefefd;   /* diagram background / pill fills */
+  --tan-label:  #9c9287;   /* zone label text (Figma #9c9287) */
+  --flow:       #454141;   /* incident-flow lines (Figma #454141) */
+  --ink-note:   #454141;   /* incident annotation text (Figma #454141) */
+  --paper:      #f9f9f8;   /* diagram surface / label chips (Figma #F9F9F8) */
 
   /* --- Category accents (detail panel + layer dots), per concept doc ------- */
   --police:     #2f6fdb;   --police-soft: #e7f0fd;

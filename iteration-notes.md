@@ -22,6 +22,44 @@ Please ask questions if you have any.
 
 ## Done
 
+### Round 16 — Detail-panel content updates + toggle fixes
+- [x] **Incident-flow story texts now toggle with Incident Flow.** They were already tagged `flow`, but `applyVisibility()` only queried `.node/.connector/.pill/.zone/.edge` — `.annotation-note` (and `.region`) were never toggled. Added them to the query so the journey texts hide/show with the flow lines. _(js/app.js)_
+- [x] **911 / non-emergency tags always visible** — moved to `layers: []` so they never disappear when Incident Flow is toggled off. _(data/norcomm.js)_
+- [x] **CAD collaboration wording** — replaced "communicate through CAD" with "collaborate on an incident through CAD — can also talk in person or any other method if urgent" (on the CAD node and the 911 call-receiver). _(data/norcomm.js)_
+- [x] **Supervisor** — added that they help with any issues staff on the floor encounter (barging into calls, helping make decisions, etc.). _(data/norcomm.js)_
+- [x] **Police Dispatch 1 & 2** — noted they do the same job for different regions of their jurisdiction. _(data/norcomm.js)_
+- [x] **Police on-duty/patrol** — added that they transmit to dispatchers when they pull someone over to request look-ups (warrants, ID, license plates, etc.). _(data/norcomm.js)_
+- [x] Rebuilt `dist/index.html`.
+
+### Round 15 — Fixes from review (telephone lines, supervisor line, label centering)
+> ⚠️ Root-cause found first: we were working in TWO copies of the repo. Your edits saved to the OneDrive clone (`…\OneDrive - Codan Limited\Documents\GitHub\center-flows`), while this session works in `C:\Users\vhoang\UX research hub`. Decision: **`UX research hub` is home base** — point the editor there. (Same git repo/remote, both at commit 774571d; my Round 13-15 work is uncommitted here.)
+- [x] **Telephone comm lines fixed.** In the Round 14 rebuild, two pink comm lines (`54:58`, `54:59`) kept stale old-frame coords. Repositioned to the real frame spots — 911 telephone line → (173, 575), non-emergency telephone line → (214.5, 694). _(data/norcomm.js)_
+- [x] **Supervisor → call-receivers comm line restored.** The rebuild dropped Figma vector `54:79` (asset `fada4626…`); added it back at (486.58, 253.5). (The supervisor → police-dispatch line `54:144` was already present.) _(data/norcomm.js)_
+- [x] **Department zone labels re-centered.** CALL / POLICE / FIRE were left-anchored so their min-width shifted them off-center (FIRE worst, ~21px). Now x = zoneCenter − w/2. _(data/norcomm.js)_
+- [x] **Count annotations centered.** `(1-3 call receivers)` etc. are now center-anchored (`transform: translateX(-50%)`, min-width cleared) with x = their node-cluster center, so they sit centered under the group. _(css/app.css `.pill.annotation`, data/norcomm.js)_
+- [x] Rebuilt `dist/index.html` (40 SVGs inlined, zero external refs).
+
+### Round 14 — Full 1:1 re-sync from Figma (node 54:146 "norcomm-2")
+Rebuilt `data/norcomm.js` from scratch off the exact frame geometry (stage now 2210×1303, no offsets). Addressed every note:
+- [x] **Removed the grid background** — canvas is now a plain `--canvas-bg` surface. _(css/app.css `.canvas-wrap`)_
+- [x] **Resource shapes now match Figma** — they were soft **blurred glow blobs** (not hard octagons): tinted per category with a Phosphor icon centered and a bold label below. Downloaded the 4 glow SVGs from Figma; new `type: "resource"` + `glow` support in the engine. _(js/diagram.js, css/app.css `.node.resource`)_ → **You don't need to do anything for me to read them; I read them fine via Dev Mode.**
+- [x] **Missing incident-flow lines added** — re-exported ALL connectors from the frame at native coords; the flow lines are now `#454141` and include the intake tap-lines + extra fire-dispatch routes that were missing.
+- [x] **Phosphor icons** — the Figma icons already ARE Phosphor (PoliceCar, Siren, Fire, FireTruck, Phone, Radio, UserSound). Downloaded the exact exports and use them on the resource nodes + comm pills (via `iconAsset`), replacing the Lucide emojis on the diagram. _(header tags still use Lucide map-pin/building/bar-chart.)_
+- [x] **Incident flow lines + annotations share ONE layer** — both tagged `"flow"` (Incident Flow), matching the Figma data-annotations grouping. Toggling Incident Flow now shows/hides the lines and the story notes together.
+- [x] **911 / non-emergency tags fixed** — now **outline** pills (white fill, colored border + bold text): 911 red `#c95548`, non-emergency yellow `#c3ad61`. _(css/app.css `.pill.c911`/`.pill.nonemergency`)_
+- [x] Also synced exact Figma colors: CAD sage `#6E936E`, flow/annotation `#454141`, zone labels `#9c9287`, surface `#F9F9F8`. Bundler now inlines `glow`/`iconAsset` assets too. _(css/theme.css, build.sh)_
+- [x] Rebuilt `dist/index.html` (39 SVGs inlined, zero external refs).
+
+### Round 13 — Sync Figma design updates (node 54:146 "norcomm-2")
+Read the design + annotations straight from Figma Dev Mode (I could read all three narrative notes and both region labels).
+- [x] **"INSIDE THE CENTER" region** — added the organic light-gray blob (exact vector exported from Figma → `assets/inside-center-blob.svg`) behind the whole in-center workflow, with its uppercase label. New data-driven `regions: []` + `_renderRegions()`. _(js/diagram.js, data/norcomm.js, css/app.css `.region`)_
+- [x] **"OUTSIDE THE CENTER" label** — label-only region marking the field-resource area (lower right).
+- [x] **Three narrative annotations (the flow story)** — "call → incident…", "once the incident has been assessed…", and "after resources have been notified…" placed at their Figma positions. New data-driven `annotations: []` + `_renderAnnotations()`. _(js/diagram.js, data/norcomm.js, css/app.css `.annotation-note`)_
+- [x] **Icons inside the pills** — phone on the telephone pills, radio on the radio pills, message on "verbally in person" — inlined Lucide SVGs. Pills widened to fit icon + text. _(js/diagram.js `_renderPills`, data/norcomm.js, css/app.css `.pill.has-icon`)_
+- [x] **Bundler now inlines named assets** (not just 40-char Figma hashes), so `inside-center-blob.svg` travels in the bundle. _(build.sh)_
+- [x] Rebuilt `dist/index.html` (28 SVGs inlined, zero external refs).
+- Note: kept the existing pixel-faithful nodes/connectors — the norcomm-2 frame's core layout matches the current build (uniform +15,−21 offset), so this round is purely additive (regions, annotations, pill icons) rather than a re-export.
+
 ### Round 12 — Modern floating layout + real icons
 - [x] **Detail card fades in (fade-in-fwd), floats, no longer sidebar.** Replaced the slide-in docked sidebar with a floating rounded card that fades in using the exact `fade-in-fwd` keyframe supplied. It sits left of the layers card so the legend stays visible. _(css/app.css `@keyframes fade-in-fwd`, `.detail`; js/panels.js)_
 - [x] **Selected-shape indicator.** Clicking a node now rings it in its category color (box-shadow ring for circles/boxes; drop-shadow that follows the clip-path for octagons) and lifts it slightly. The ring clears when the card closes (× / Escape / re-click). _(js/diagram.js `Diagram.select`; js/app.js wiring; css/app.css `.node.selected`)_

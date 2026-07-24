@@ -66,10 +66,14 @@
     if (e.key === "Escape") Detail.close();
   });
 
-  /* Show/hide every element based on the current layer toggles.
-     Nodes, connectors, and pills all carry a data-layers attribute. */
+  /* Show/hide every element based on the current layer toggles. Every drawn
+     element carries a data-layers attribute — including the incident-flow story
+     notes (.annotation-note) and the region blob/labels — so they toggle with
+     their layer (e.g. the flow notes hide/show with Incident Flow). */
   function applyVisibility() {
-    document.querySelectorAll(".node, .connector, .pill, .zone, .edge").forEach(function (el) {
+    document.querySelectorAll(
+      ".node, .connector, .pill, .zone, .edge, .annotation-note, .region, .region-label"
+    ).forEach(function (el) {
       el.classList.toggle("faded", !Panels.isVisible(el.dataset.layers));
     });
     // Staff annotation card
