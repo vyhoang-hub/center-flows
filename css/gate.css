@@ -1,0 +1,91 @@
+/* =============================================================================
+ * GATE — the passphrase screen shown before the diagram is decrypted
+ * =============================================================================
+ * Only present in the encrypted bundle produced by build.sh. Uses the same
+ * tokens as the rest of the app (css/theme.css) so the lock screen looks like
+ * it belongs to the page rather than a browser popup.
+ * ========================================================================== */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+  font-family: var(--font);
+}
+
+.gate-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 28px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.gate-card h1 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.gate-card p {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.gate-row { display: flex; gap: 8px; }
+
+.gate-card input[type="password"] {
+  flex: 1;
+  min-width: 0;                /* lets the field shrink instead of overflowing */
+  padding: 9px 11px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.gate-card input[type="password"]:focus {
+  outline: none;
+  border-color: var(--slate);
+  box-shadow: 0 0 0 3px rgba(53, 74, 87, .12);
+}
+
+.gate-card button {
+  padding: 9px 16px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--slate);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.gate-card button:hover:not(:disabled) { background: #2a3b46; }
+.gate-card button:disabled { opacity: .6; cursor: default; }
+
+/* Error / status line. Reserves its own space so the card doesn't jump when a
+   message appears. */
+.gate-msg {
+  min-height: 18px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--red);
+}
+
+.gate-msg.is-busy { color: var(--ink-soft); }

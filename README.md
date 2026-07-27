@@ -143,9 +143,17 @@ cannot override a SharePoint iframe that disallows scripts. The bundle remains
 useful for local/offline sharing:
 
 ```
-bash build.sh                 # bundles data/norcomm.js -> dist/index.html
-bash build.sh data/other.js   # bundles another center
+bash build.sh                 # ENCRYPTED bundle of data/norcomm.js -> dist/index.html
+bash build.sh data/other.js   # encrypted bundle of another center
+bash build.sh --plain         # unencrypted, local preview only — never publish
 ```
+
+By default the bundle is **encrypted behind a passphrase**: the diagram and the
+research data are stored as AES-256 ciphertext and decrypted in the reader's
+browser after they type the passphrase. `build.sh` prompts for it. This is what
+makes it safe to publish to GitHub Pages, which anyone with the URL can read. The
+scheme and how to rotate the passphrase are documented in `HOSTING.md`; the moving
+parts are `crypt.sh` (encrypts), `js/gate.js` + `css/gate.css` (the lock screen).
 
 ### Working interactive path
 
@@ -153,16 +161,27 @@ Host the static site at a normal HTTPS URL, then put that URL in SharePoint's
 **Embed** web part. A normal web host permits the JavaScript that renders and
 operates the diagram.
 
-This repository currently contains a GitHub Pages deployment workflow. GitHub
-Pages is public, and the repository itself is currently public, so do not put
-sensitive research in this version. To enable the existing workflow one time:
+This repository deploys to GitHub Pages at
+`https://vyhoang-hub.github.io/center-flows/`. GitHub Pages is readable by anyone
+who has the URL — there is no sign-in, and that holds even for a private repo — so
+the workflow publishes **only the encrypted `dist/index.html`** and nothing else.
+The rest of the repo (including `data/norcomm.js`) is not served. A guard step
+fails the deploy if the bundle is not encrypted.
 
-1. Open the GitHub repository.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment → Source**, select **GitHub Actions**.
-4. Re-run the latest **Deploy to GitHub Pages** workflow (or push a new commit).
-5. Verify `https://vyhoang-hub.github.io/center-flows/`.
-6. In SharePoint, edit the page, add an **Embed** web part, and paste that URL.
+Two caveats worth keeping in view:
+
+- **The repository itself is still public**, so `data/norcomm.js` is readable on
+  github.com regardless of what Pages serves, and it stays in earlier commits even
+  if deleted. Making the repo private closes that; Pages keeps working.
+- **The site published plaintext before 2026-07-27** (the workflow uploaded the
+  whole repo root). Assume that content may already have been copied or indexed.
+
+To publish a change:
+
+1. `bash build.sh` and enter the passphrase.
+2. Commit `dist/index.html` and push to `main`.
+3. Verify `https://vyhoang-hub.github.io/center-flows/` shows the passphrase screen.
+4. In SharePoint, edit the page, add an **Embed** web part, and paste that URL.
 
 The preferred long-term home for internal research is **Azure Static Web Apps
 with Entra ID sign-in** (or another company-approved internal HTTPS host). After

@@ -8,30 +8,56 @@
 # into a single HTML file with no external references, so it can be dropped
 # anywhere as one file.
 #
-# Usage:   bash build.sh                 # bundles data/norcomm.js by default
-#          bash build.sh data/other.js   # bundle a different center
+# By default the bundle is ENCRYPTED behind a passphrase (see crypt.sh): the
+# diagram and the research data are stored as ciphertext and only decrypted in
+# the reader's browser. That is what makes it safe to publish to GitHub Pages,
+# which is readable by anyone who has the URL. See HOSTING.md.
+#
+# Usage:   bash build.sh                    # encrypted bundle of data/norcomm.js
+#          bash build.sh data/other.js      # encrypt a different center
+#          bash build.sh --plain            # UNENCRYPTED, for local preview only
 #
 # Output:  dist/index.html   (open it by double-click to verify)
 #
-# No Node/npm/Python needed — pure bash + base64 (both already on this machine).
+# No Node/npm/Python needed — pure bash + base64 + openssl (all already here).
 # Re-run this whenever you change the app or the data and want a fresh bundle.
 # =============================================================================
 set -euo pipefail
 cd "$(dirname "$0")"
 
-DATA_FILE="${1:-data/norcomm.js}"
+# --- Parse arguments ----------------------------------------------------------
+# --plain skips encryption. Handy for checking a change renders before you go to
+# the trouble of typing a passphrase, but never publish the result.
+ENCRYPT=1
+DATA_FILE=""
+for arg in "$@"; do
+  case "$arg" in
+    --plain) ENCRYPT=0 ;;
+    -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
+    -*) echo "ERROR: unknown option: $arg" >&2; exit 1 ;;
+    *)  DATA_FILE="$arg" ;;
+  esac
+done
+DATA_FILE="${DATA_FILE:-data/norcomm.js}"
+
 OUT_DIR="dist"
 OUT="$OUT_DIR/index.html"
 
 [ -f "$DATA_FILE" ] || { echo "ERROR: data file not found: $DATA_FILE" >&2; exit 1; }
 mkdir -p "$OUT_DIR"
 
-echo "Bundling '$DATA_FILE' -> $OUT"
+if [ "$ENCRYPT" -eq 1 ]; then
+  echo "Bundling '$DATA_FILE' -> $OUT (encrypted)"
+else
+  echo "Bundling '$DATA_FILE' -> $OUT (PLAIN — do not publish this)"
+fi
 
 # --- 1. Build window.ASSET_MAP from every .svg the data file references -------
 # Each SVG becomes a base64 data: URI so it lives inside the HTML.
 ASSET_JS="$(mktemp)"
-trap 'rm -f "$ASSET_JS"' EXIT
+PAYLOAD="$(mktemp)"
+ENVELOPE="$(mktemp)"
+trap 'rm -f "$ASSET_JS" "$PAYLOAD" "$ENVELOPE"' EXIT
 echo "window.ASSET_MAP = {" > "$ASSET_JS"
 count=0
 # Pull every asset name out of the data file. Assets are referenced by several
@@ -50,7 +76,29 @@ done
 echo "};" >> "$ASSET_JS"
 echo "  inlined $count SVG asset(s)"
 
-# --- 2. Assemble the single HTML file ----------------------------------------
+# --- 2. Collect everything that must be kept secret --------------------------
+# This is the app's brain plus the research content. In an encrypted build it all
+# becomes one ciphertext blob; the order is the same load order index.html uses,
+# because diagram.js/panels.js declare top-level `var Diagram`/`Panels`/`Detail`
+# that app.js then reads — they have to end up in one shared scope.
+{
+  cat "$ASSET_JS"        # window.ASSET_MAP (inlined SVGs) — must come first
+  echo ''
+  cat "$DATA_FILE"       # window.DISPATCH_CENTER
+  echo ''
+  cat js/diagram.js
+  echo ''
+  cat js/panels.js
+  echo ''
+  cat js/app.js
+} > "$PAYLOAD"
+
+if [ "$ENCRYPT" -eq 1 ]; then
+  # crypt.sh prompts for the passphrase on stderr and writes JSON to stdout.
+  bash crypt.sh "$PAYLOAD" > "$ENVELOPE"
+fi
+
+# --- 3. Assemble the single HTML file ----------------------------------------
 {
   echo '<!DOCTYPE html>'
   echo '<html lang="en">'
@@ -62,9 +110,29 @@ echo "  inlined $count SVG asset(s)"
   echo '  <style>'
   cat css/theme.css
   cat css/app.css
+  [ "$ENCRYPT" -eq 1 ] && cat css/gate.css
   echo '  </style>'
   echo '</head>'
   echo '<body>'
+
+  # Passphrase screen. Sits above the app markup and removes itself once the
+  # payload is decrypted. The app shell below stays empty until then.
+  if [ "$ENCRYPT" -eq 1 ]; then
+    cat <<'GATE'
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <h1>Dispatch Workflow</h1>
+      <p id="gateNote">This page holds internal UX research. Enter the passphrase to view it.</p>
+      <div class="gate-row">
+        <input type="password" id="gatePass" placeholder="Passphrase"
+               autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <button type="button" id="gateBtn">Unlock</button>
+      </div>
+      <div class="gate-msg" id="gateMsg" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+GATE
+  fi
   # Body markup is extracted straight from index.html (the lines between <body>
   # and the first <script>), so the bundle NEVER drifts from the real page.
   # We drop index.html's <script src=...> tags because the bundle inlines all JS
@@ -78,20 +146,46 @@ echo "  inlined $count SVG asset(s)"
     inbody && /^[[:space:]]*<script/ { exit }
     inbody                      { print }
   ' index.html
-  echo '  <script>'
-  cat "$ASSET_JS"        # window.ASSET_MAP (inlined SVGs) — must come first
-  echo ''
-  cat "$DATA_FILE"       # window.DISPATCH_CENTER
-  echo ''
-  cat js/diagram.js
-  echo ''
-  cat js/panels.js
-  echo ''
-  cat js/app.js
-  echo '  </script>'
+  if [ "$ENCRYPT" -eq 1 ]; then
+    # Only ciphertext reaches the page. The envelope carries its own KDF
+    # parameters, so a future iteration-count change won't break old bundles.
+    echo '  <script>'
+    printf 'window.__ENVELOPE__ = '
+    cat "$ENVELOPE"
+    echo ';'
+    echo '  </script>'
+    echo '  <script>'
+    cat js/gate.js
+    echo '  </script>'
+  else
+    echo '  <script>'
+    cat "$PAYLOAD"
+    echo '  </script>'
+  fi
   echo '</body>'
   echo '</html>'
 } > "$OUT"
 
+# --- 4. Safety net: prove no plaintext research leaked into an encrypted build -
+# Cheap insurance against a future edit accidentally putting the payload back in
+# the clear. Canaries are strings that only exist in the research content.
+if [ "$ENCRYPT" -eq 1 ]; then
+  leaked=0
+  for canary in 'Priority 1' 'NORCOMM' 'Bellevue' 'DISPATCH_CENTER'; do
+    if grep -qF "$canary" "$OUT"; then
+      echo "ERROR: plaintext '$canary' found in $OUT — refusing to leave a leaky bundle." >&2
+      leaked=1
+    fi
+  done
+  if [ "$leaked" -eq 1 ]; then
+    rm -f "$OUT"
+    exit 1
+  fi
+  echo "  verified: no plaintext research content in the bundle"
+fi
+
 bytes=$(wc -c < "$OUT")
 echo "Done: $OUT ($bytes bytes). Double-click it to verify before uploading."
+if [ "$ENCRYPT" -eq 0 ]; then
+  echo "NOTE: this is a PLAIN bundle — readable by anyone. Do not publish it." >&2
+fi

@@ -1,16 +1,20 @@
 name: Deploy to GitHub Pages
 
-# Deploys the static site (repo root) to GitHub Pages on every push to main.
-# No build step — the site is plain HTML/CSS/JS, so we just upload the files.
+# Publishes ONLY the encrypted single-file bundle (dist/index.html) to GitHub Pages.
 #
-# ⚠️ PUBLIC EXPOSURE — DELIBERATE CHOICE (2026-07-22).
-# GitHub Pages is PUBLICLY reachable by URL, even from a private repo (unless the
-# org is on GitHub Enterprise Cloud with private Pages). SharePoint's file
-# preview / embed sandbox blocks the JavaScript this app needs, so the owner
-# chose to host on GitHub Pages and embed that public URL into SharePoint,
-# accepting that anyone with the link can view it. If this content is ever
-# reclassified as not-for-public, re-disable this trigger and move to a private
-# host (e.g. Azure Static Web Apps with sign-in) — see README.md.
+# Why only that one file: a GitHub Pages site is readable by anyone who has the
+# URL — there is no sign-in, and that stays true even for a private repo (unless
+# the org is on GitHub Enterprise Cloud with private Pages). Publishing the repo
+# root would therefore serve data/norcomm.js, iteration-notes.md and concept-idea
+# as plain fetchable files, which is exactly what happened before 2026-07-27.
+#
+# dist/index.html holds the diagram and the research data as AES-256 ciphertext
+# and asks for a passphrase in the browser (see crypt.sh + js/gate.js), so the
+# only thing this job uploads is an encrypted blob. Everything else in the repo
+# stays unpublished.
+#
+# Build it locally with `bash build.sh`, then commit dist/index.html and push.
+# The "guard" step below refuses to publish if that file looks unencrypted.
 
 on:
   push:
@@ -40,14 +44,59 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ---------------------------------------------------------------------
+      # Refuse to publish plaintext research. This is the backstop for the
+      # realistic mistake: someone runs `bash build.sh --plain` (or edits
+      # build.sh) and commits the result without noticing.
+      # ---------------------------------------------------------------------
+      - name: Guard — the bundle must be encrypted
+        run: |
+          set -euo pipefail
+          BUNDLE=dist/index.html
+
+          if [ ! -f "$BUNDLE" ]; then
+            echo "::error::$BUNDLE is missing. Run 'bash build.sh' and commit it."
+            exit 1
+          fi
+
+          # It must actually be an encrypted bundle.
+          if ! grep -q '__ENVELOPE__' "$BUNDLE"; then
+            echo "::error::$BUNDLE has no encryption envelope — it looks like a --plain build."
+            exit 1
+          fi
+
+          # And it must not contain research content in the clear. These strings
+          # exist only in the plaintext data, never in base64 ciphertext.
+          leaked=0
+          for canary in 'Priority 1' 'NORCOMM' 'Bellevue' 'DISPATCH_CENTER'; do
+            if grep -qF "$canary" "$BUNDLE"; then
+              echo "::error::plaintext '$canary' found in $BUNDLE — refusing to publish."
+              leaked=1
+            fi
+          done
+          [ "$leaked" -eq 0 ] || exit 1
+
+          echo "OK: bundle is encrypted and carries no plaintext research content."
+
+      # Stage exactly one file, so nothing else in the repo can be served.
+      - name: Stage the encrypted bundle
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp dist/index.html _site/index.html
+          # Belt and braces: no Jekyll processing, and no directory listings of
+          # anything we didn't explicitly copy.
+          touch _site/.nojekyll
+          echo "Staged:"; ls -la _site
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Publish the whole repo root (index.html lives at the top level).
-          path: .
+          # ONLY the staged directory — never `.` (the repo root).
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

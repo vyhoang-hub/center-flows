@@ -1,20 +1,41 @@
 # Hosting & embedding notes
 
-## Current state (2026-07-23)
+## Current state (2026-07-27)
 
-- **Ready but not live yet:** GitHub Pages (public) — the deployment workflow is
-  present, but Pages has not been enabled in repository settings. The current
-  workflow fails at **Configure Pages** and the expected URL returns 404. Complete
-  the one-time setting below, then re-run the workflow.
+- **Live:** GitHub Pages, at `https://vyhoang-hub.github.io/center-flows/`.
+- **Protected by a passphrase.** The published page contains the diagram and the
+  research data only as AES-256 ciphertext; it asks for a passphrase and decrypts
+  in the reader's browser. See [Encryption](#encryption-how-the-passphrase-gate-works)
+  below.
+- **Only one file is published.** The workflow uploads `dist/index.html` and
+  nothing else, so `data/norcomm.js`, `iteration-notes.md`, `concept-idea` and the
+  rest of the repo are not served at all.
 - **Why this host is needed:** SharePoint
   cannot run this app's JavaScript in an embed (its file preview / File-viewer /
   "Copy embed code" all route through `_layouts/15/embed.aspx`, a script-blocking
   sandbox). GitHub Pages serves real HTML, so the diagram renders, and SharePoint's
   **Embed** web part can show that external URL.
-- ⚠️ **Public exposure:** a GitHub Pages URL is reachable by anyone with the link,
-  even from a private repo. Accepted as an interim measure.
 - **Planned:** move to **private Azure hosting** behind company sign-in (below), then
   repoint the SharePoint embed at the private URL and disable the Pages workflow.
+  The passphrase gate is what makes public Pages tolerable until then; it is not a
+  replacement for real sign-in.
+
+### ⚠️ What happened before 2026-07-27
+
+Between enabling Pages and this change, the workflow published the **whole repo
+root** (`path: .`). That meant `https://vyhoang-hub.github.io/center-flows/data/norcomm.js`,
+`…/iteration-notes.md` and `…/concept-idea` returned the research content in plain
+text to anyone with the URL. Assume that content may already have been fetched,
+cached or indexed — encryption stops future access, not past access.
+
+Two follow-ups that encryption does **not** fix:
+
+1. **The repo itself is public**, so `data/norcomm.js` is still readable on
+   github.com, and it appears in earlier commits even if deleted. Making the repo
+   private (Settings → Danger Zone) closes both; Pages keeps working.
+2. **Consider whether the alert-tone detail belongs in the document at all** —
+   `data/norcomm.js` maps specific tones to "Priority 1 / weapon involved" and to a
+   20-minute unassigned-call threshold.
 
 ---
 
@@ -26,6 +47,50 @@
 4. Published URL: `https://vyhoang-hub.github.io/center-flows/`
 5. Embed in SharePoint: page → **Edit** → **Embed** web part → paste the Pages URL
    (an external `https://` site, so scripts run — unlike a SharePoint-hosted file).
+   Put the passphrase in the text next to the embed, so colleagues who can already
+   see the SharePoint page can get in.
+
+---
+
+## Encryption: how the passphrase gate works
+
+`bash build.sh` asks for a passphrase and wraps the app's code + data in
+AES-256-CBC with an HMAC-SHA256 tag (`crypt.sh` builds it, `js/gate.js` opens it).
+Both sides use only primitives that OpenSSL and the browser's built-in WebCrypto
+share, so there is no JavaScript crypto library to trust or update.
+
+```
+salt   = 8 random bytes
+master = PBKDF2-SHA256(passphrase, salt, 600,000 iterations)
+encKey = HMAC-SHA256(master, "dispatch-hub/v1/enc")
+macKey = HMAC-SHA256(master, "dispatch-hub/v1/mac")
+ct     = AES-256-CBC(payload, encKey, random 16-byte iv)
+mac    = HMAC-SHA256(macKey, salt || iv || ct)
+```
+
+The browser checks `mac` **before** decrypting, so a wrong passphrase is rejected
+cleanly rather than producing garbage.
+
+### Rotating the passphrase
+
+1. `bash build.sh` → enter the new passphrase twice.
+2. Commit `dist/index.html` and push. Pages republishes automatically.
+3. Tell the readers. Old copies of the file still open with the old passphrase —
+   rotation protects the published page, not copies already downloaded.
+
+### Choosing a passphrase
+
+Anyone can download the encrypted file and grind guesses offline, so **length is
+the only real defence**. 600,000 PBKDF2 iterations makes each guess cost about a
+second, but a short or predictable passphrase ("norcomm", "dispatch") still falls
+quickly. Use a long multi-word phrase. **Never commit it to the repo** — share it
+in the SharePoint page text or by email.
+
+### Previewing locally
+
+`bash build.sh --plain` builds an unencrypted bundle for quick checks. It is
+readable by anyone, the deploy workflow refuses to publish it, and you should not
+share it.
 
 ---
 
@@ -63,13 +128,19 @@ static HTML/CSS/JS (no build step), so deployment is straightforward.
 2. SharePoint page → **Edit** → **Embed** web part → replace the Pages URL with the
    Azure URL → **Publish**.
 3. Disable public Pages: in `.github/workflows/deploy-pages.yml`, comment out the
-   `push:` trigger again (or delete the workflow).
+   `push:` trigger again (or delete the workflow). Also turn Pages off in
+   **Settings → Pages** so the old URL stops resolving.
+4. Once Entra ID sign-in is doing the access control, the passphrase gate is
+   optional — you can serve the `--plain` bundle behind it if you prefer.
 
 ---
 
 ## Updating the diagram (either host)
 
 1. Edit the data (`data/norcomm.js`) or add a center from `data/_template.js`.
-2. `bash build.sh` to refresh the single-file `dist/index.html` (used for direct
-   file sharing). For GitHub Pages, just pushing to `main` republishes the repo-root
-   multi-file version automatically.
+2. Check it renders: `bash build.sh --plain`, then open `dist/index.html`.
+3. `bash build.sh` and enter the passphrase to produce the encrypted bundle.
+4. Commit `dist/index.html` and push to `main` — Pages republishes automatically.
+
+Step 3 is required: the site now serves `dist/index.html`, so a data change is not
+live until you rebuild and commit that file.
