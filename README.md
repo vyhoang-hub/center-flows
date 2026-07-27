@@ -1,11 +1,30 @@
-# Dispatch Center Workflow Hub
+# User Research Hub
 
-An interactive, data-driven visualization of how a dispatch center handles calls,
-dispatching, communication, systems, and role responsibilities. Built for internal
-UX research documentation — product managers, designers, developers, and leadership.
+A place to keep everything learned from dispatch-center site visits, organized **by
+location rather than by artifact type**. The home page indexes every center by
+country and region; opening one gives you a single page holding its overview,
+mental models, personas, workflows, key findings, and supporting research.
 
-The first workflow modeled is **NORCOMM**. The system is designed so you can add
-future dispatch centers by **editing a data file, not rebuilding the UI**.
+Built for internal UX research documentation — product managers, designers,
+developers, and leadership.
+
+The first center documented is **NORCOMM**, whose mental model is a fully
+interactive diagram. The system is designed so you add future centers by **adding a
+data file, not rebuilding the UI**.
+
+### How the pages fit together
+
+```
+#/                        home — centers grouped by country / region
+#/c/<id>                  a center, on its first tab with content
+#/c/<id>/<section>        a named tab: overview, mental-models, personas,
+                          workflows, findings, supporting
+```
+
+Those are URL **hashes**, not separate files: the whole hub is one document, which
+is what lets it publish as a single encrypted file (see "Publishing" below) and
+still open from a double-clicked `index.html`. Deep links and the browser's
+back/forward buttons work normally.
 
 ---
 
@@ -37,15 +56,22 @@ UX research hub/
   index.html          ← open locally; also the hosted site's entry page
   css/
     theme.css          ← colors & design tokens (edit colors here)
-    app.css            ← layout and component styling
+    app.css            ← layout and component styling for the diagram
+    hub.css            ← the home index and the center-page chrome
+    gate.css           ← the passphrase screen (encrypted builds only)
   js/
     diagram.js         ← draws nodes, edges, and zones from the data
     panels.js          ← layer toggles + detail panel
-    app.js             ← wires data → diagram → panels together
+    app.js             ← mounts one center's data into the diagram
+    hub.js             ← the router, home index, and the six content tabs
+    gate.js            ← decrypts the bundle in the browser
   data/
-    norcomm.js         ← the NORCOMM workflow (the sample data)
-    _template.js       ← blank copy for adding a new center
+    norcomm.js         ← NORCOMM: diagram + research (the worked example)
+    harbor-point.js    ← placeholder center
+    riverside.js       ← placeholder center, second country
+    _template.js       ← copy this to add a new center (never bundled)
   assets/              ← the exact connector & zone-outline SVGs from Figma
+  build.sh             ← bundles everything into one encrypted dist/index.html
   README.md
 ```
 
@@ -58,46 +84,64 @@ saved locally — the page does **not** depend on Figma being open.
 
 ---
 
-## How to add another dispatch center
+## How to add another center
 
 1. **Copy** `data/_template.js` to a new name, e.g. `data/springfield.js`.
-2. **Fill in** the `meta`, `nodes`, `edges`, and (optionally) `zones` and `staff`.
-   Use `data/norcomm.js` as a worked example.
-3. **Point the page at it:** in `index.html`, change this line:
-   ```html
-   <script src="data/norcomm.js"></script>
-   ```
-   to:
+2. **Rename the global** at the top (`window.CENTER_TEMPLATE`) and the matching name
+   in the registration line at the bottom, so two centers can't overwrite each other.
+3. **Fill in** `meta` — especially `meta.id` (it's the URL) and `meta.geo`, which is
+   what places the card on the home page. Then fill in whatever you have: the
+   diagram keys (`layers`, `nodes`, `edges`, …) and/or the `research` block. Anything
+   you leave out shows an empty state naming the field to fill in.
+4. **Add one line** to `index.html`, next to the other data files:
    ```html
    <script src="data/springfield.js"></script>
    ```
-4. **Refresh** the browser to preview locally.
-5. **For an offline, single-file copy**, bundle that center:
-   ```
-   bash build.sh data/springfield.js
-   ```
-   For an interactive SharePoint experience, publish the site to an approved
-   web host and embed that hosted URL (see "Publishing / embedding" below).
+5. **Refresh** the browser. The center appears on the home page under its
+   country/region, at `#/c/springfield`.
+6. **Bundle it** with `bash build.sh` — every `data/*.js` except `_template.js` is
+   included automatically, so there's nothing to configure.
+
+Use `data/norcomm.js` as the worked example, and `data/harbor-point.js` as the
+smallest useful placeholder.
 
 ### The data model (per center)
 
+Everything except `meta` is optional. A center with only `meta` is a valid
+placeholder card.
+
 | Field     | What it is |
 |-----------|------------|
-| `meta`    | Name, location, visit date, summary, tags. Shown in the header. |
-| `layers`  | The toggle list on the right. `id`s are referenced by nodes/edges/zones. |
+| `meta`    | `id` (the URL), `name`, `location`, `visitDate`, `summary`, `tags`, plus **`geo`** (`country` / `region` / `city` — how the home page groups it) and **`status`** (`"documented"` or `"placeholder"`, which drives the home-card badge). |
+| `research`  | The center page's tabs — see the table below. |
+| `layers`  | The toggle list on the right of the diagram. `id`s are referenced by nodes/edges/zones. Use `layers: []` for a center with no diagram. |
 | `zones`     | Big grouping outlines (e.g. CALL / POLICE / FIRE), drawn from data — no SVG export needed. Optional. |
-| `nodes`     | Circles (roles), octagons (field resources), system boxes (CAD). Each has a `detail` shown in the click-through panel. |
+| `nodes`     | Circles (roles), resource blobs (field resources), system boxes (CAD). Each has a `detail` shown in the click-through panel. |
 | `edges`     | Curved lines drawn between two nodes by `id` (`from`/`to`), with a `curve` bend and optional arrowhead. **This is the easy way to draw connections for a new center — no Figma export required.** |
 | `connectors`| Exact SVG vectors exported from a Figma frame, hand-positioned. NORCOMM uses these to stay pixel-faithful; a new center can skip them entirely and use `edges` instead. |
 | `pills`     | Small text chips (telephone, radio, 911, zone/flow labels, annotations). |
-| `staff`     | Optional staff-distribution card. |
+| `about`     | The "About this center" card floating over the diagram. Doubles as the Overview tab when `research.overview` is absent, so you write it once. |
+
+### The `research` block (one key per tab)
+
+| Key | Shape | Notes |
+|---|---|---|
+| `overview`     | `{ sections: [{ heading, text, items }] }` | Omit it to reuse `about.sections`. |
+| `mentalModels` | `[{ id, title, description, view }]` | `view: "diagram"` means *this artifact is the interactive canvas* — the tab shows the diagram instead of cards. |
+| `personas`     | `[{ id, name, role, shift, quote, goals, frustrations, tools }]` | |
+| `workflows`    | `[{ id, title, description, steps }]` | Written walkthroughs; the diagram belongs under `mentalModels`. |
+| `findings`     | `[{ id, title, impact, detail, evidence }]` | `impact` is `high` / `medium` / `low` and colors the badge. |
+| `supporting`   | `[{ id, title, kind, description }]` | `kind` is `photo` / `note` / `transcript` / `artifact`. |
+
+`items` and `evidence` lists accept either plain strings or `{ text, children }` for
+one level of nesting.
 
 > **Two ways to draw lines.** `edges` are drawn procedurally between nodes, so a
 > brand-new center is authored as **pure data with zero image exports**.
 > `connectors` are pre-exported Figma SVGs used only when you need to reproduce a
 > specific Figma layout exactly (as NORCOMM does).
 
-**Coordinates:** the stage is `2002 × 1303` units (from the Figma frame). A node's
+**Coordinates:** the stage is `2210 × 1303` units (from the Figma frame). A node's
 or zone's `x`/`y` is its **top-left corner** and `w`/`h` its size. Edges connect
 node **centers** automatically (computed from `x`/`y` + `w`/`h`), so you only ever
 position the boxes. The whole stage auto-scales to fit the screen, so you can think
@@ -114,7 +158,7 @@ elements fade out. "Show all" / "Hide all" are at the bottom of the panel.
 Set in `css/theme.css`. This build matches the **Figma design** exactly:
 
 - **Slate `#354a57`** — all role circles (call takers, dispatchers, supervisor, data)
-- **Light blue `#c9d9e4`** — field-resource octagons (fire/ems/patrol)
+- **Light blue `#c9d9e4`** — field-resource blobs (fire/ems/patrol)
 - **Sage `#a4c5a4`** — CAD / system boxes
 - **Pink `#b866a3`** — communication pills & dashed communication paths
 - **Red `#c95548`** — 911 intake · **Yellow `#e2ce88`** — non-emergency intake
@@ -131,20 +175,20 @@ in `css/theme.css` to restyle.
 
 ### Why uploading the HTML file to SharePoint does not work
 
-The app's header, canvas background, controls, and empty Layers shell are static
-HTML. The nodes, labels, lines, layer rows, and interactions are created by
-JavaScript. SharePoint's document preview, File Viewer, and generated "Copy embed
-code" URL route the file through `_layouts/15/embed.aspx`, whose sandbox blocks
-that JavaScript. The result looks like a diagram bug because the shell remains
-visible while the actual diagram is missing.
+The page shell — the bar, canvas background, controls, and empty Layers panel — is
+static HTML. Every center name, card, tab, node, label and line is created by
+JavaScript from the data files. SharePoint's document preview, File Viewer, and
+generated "Copy embed code" URL route the file through `_layouts/15/embed.aspx`,
+whose sandbox blocks that JavaScript. The result looks like a bug because the shell
+remains visible while all the content is missing.
 
 Bundling the app into `dist/index.html` solves broken relative file paths, but it
 cannot override a SharePoint iframe that disallows scripts. The bundle remains
 useful for local/offline sharing:
 
 ```
-bash build.sh                 # ENCRYPTED bundle of data/norcomm.js -> dist/index.html
-bash build.sh data/other.js   # encrypted bundle of another center
+bash build.sh                 # ENCRYPTED bundle of EVERY center -> dist/index.html
+bash build.sh data/other.js   # just one center (or list several)
 bash build.sh --plain         # unencrypted, local preview only — never publish
 ```
 
@@ -165,13 +209,14 @@ This repository deploys to GitHub Pages at
 `https://vyhoang-hub.github.io/center-flows/`. GitHub Pages is readable by anyone
 who has the URL — there is no sign-in, and that holds even for a private repo — so
 the workflow publishes **only the encrypted `dist/index.html`** and nothing else.
-The rest of the repo (including `data/norcomm.js`) is not served. A guard step
-fails the deploy if the bundle is not encrypted.
+The rest of the repo (including every file in `data/`) is not served. A guard step
+fails the deploy if the bundle is not encrypted, or if any research content appears
+in the clear.
 
 Two caveats worth keeping in view:
 
-- **The repository itself is still public**, so `data/norcomm.js` is readable on
-  github.com regardless of what Pages serves, and it stays in earlier commits even
+- **The repository itself is still public**, so the files in `data/` are readable on
+  github.com regardless of what Pages serves, and they stay in earlier commits even
   if deleted. Making the repo private closes that; Pages keeps working.
 - **The site published plaintext before 2026-07-27** (the workflow uploaded the
   whole repo root). Assume that content may already have been copied or indexed.
@@ -222,6 +267,14 @@ Those changes cannot grant `allow-scripts` to SharePoint's preview iframe.
   node's `detail`.
 - **Add/rename a layer:** edit the `layers` array, then tag nodes/edges with its
   `id`.
+- **Add a persona / finding / workflow:** append to the matching array in that
+  center's `research` block. Nothing else needs to change — the tabs are data-driven.
+- **Move a center on the home page:** edit `meta.geo`. Countries and regions are
+  created from the data and sorted alphabetically; there is no list to maintain.
+- **Add a whole new section tab:** add an entry to `Hub.SECTIONS` and a render
+  function in `js/hub.js`. This is the one case that touches the engine.
 
 If something doesn't appear, open the browser console (F12) — a mistyped node `id`
-in an edge's `from`/`to` is the most common cause and is safely skipped.
+in an edge's `from`/`to` is the most common cause and is safely skipped. If a center
+is missing from the home page, check that its data file has a `<script>` line in
+`index.html` and that its last line registers it.

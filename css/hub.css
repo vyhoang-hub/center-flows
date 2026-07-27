@@ -1,0 +1,266 @@
+/* =============================================================================
+ * HUB — the home index of centers, and the center-page chrome
+ * =============================================================================
+ * Loaded AFTER app.css, which it deliberately overrides in a few places (marked
+ * below). Everything here is built from the tokens in theme.css, so restyling
+ * still happens in one file.
+ *
+ * The rule this file exists to work around: app.css sets
+ * `html, body { overflow: hidden }` so the diagram canvas can own wheel events
+ * and pan instead of scrolling the page. That stays true — the hub scrolls
+ * INSIDE #hubMain rather than scrolling the document.
+ * ========================================================================== */
+
+/* ---- Shell --------------------------------------------------------------- */
+/* A flex column: fixed bar on top, then either the scrolling hub content or the
+   diagram canvas filling the rest. Only one of those two is ever visible. */
+.hub {
+  height: 100vh;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  /* .chip (app.css) is `background: var(--c-soft); color: var(--c)` with no
+     fallback, so it only renders correctly inside a [data-cat] ancestor. Setting
+     it once here makes .chip reusable anywhere in the hub. */
+}
+
+.hub-bar {
+  flex: none;
+  padding: 14px 20px 0;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.hub-main {
+  flex: 1; min-height: 0;      /* min-height:0 is what lets a flex child scroll */
+  overflow-y: auto;
+}
+.hub-page { max-width: 1180px; padding: 24px 20px 64px; }
+
+/* ---- Bar contents -------------------------------------------------------- */
+.hub-crumbs {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--ink-soft); margin-bottom: 8px;
+}
+.hub-back { color: var(--ink-soft); text-decoration: none; font-weight: 600; }
+.hub-back:hover { color: var(--ink); text-decoration: underline; }
+.hub-crumb-sep { color: var(--border); }
+
+.hub-bar-main { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.hub-title { font-size: 20px; margin: 0; letter-spacing: .2px; }
+.hub-sub { margin: 0; color: var(--ink-soft); font-size: 13px; }
+
+.hub-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+/* On a center page the tags ride on the title row and are pushed to the right
+   edge, so the bar costs one row instead of two and the diagram underneath gets
+   that height back. If the bar gets narrow they wrap to their own line, still
+   right-aligned. */
+.hub-bar-main .hub-tags { margin: 0 0 0 auto; align-self: center; }
+
+/* Tag pills. app.css defines .tag only under `.app-header` and `.about-tags`,
+   so the hub needs its own scope. Same data-tone vocabulary and same markup as
+   panels.js emits, so the tag generator is shared. */
+.hub .tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; line-height: 1;
+  border-radius: 20px; padding: 5px 10px; border: 1px solid transparent;
+}
+.hub .tag .tag-ic { display: inline-flex; line-height: 0; }
+.hub .tag .tag-ic .lucide { width: 14px; height: 14px; }
+.hub .tag[data-tone="location"] { background: var(--police-soft); color: var(--police); border-color: color-mix(in srgb, var(--police) 25%, transparent); }
+.hub .tag[data-tone="agency"]   { background: var(--data-soft);   color: var(--data);   border-color: color-mix(in srgb, var(--data) 25%, transparent); }
+.hub .tag[data-tone="size"]     { background: var(--fire-soft);   color: var(--fire);   border-color: color-mix(in srgb, var(--fire) 25%, transparent); }
+.hub .tag[data-tone="neutral"]  { background: var(--neutral-soft); color: var(--ink-soft); }
+
+/* ---- Center-page tabs ---------------------------------------------------- */
+.hub-tabs { display: flex; gap: 2px; margin-top: 14px; overflow-x: auto; }
+.hub-tab {
+  flex: none; padding: 9px 14px; border-bottom: 2px solid transparent;
+  color: var(--ink-soft); text-decoration: none;
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.hub-tab:hover { color: var(--ink); background: var(--neutral-soft);
+                 border-radius: 8px 8px 0 0; }
+.hub-tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--slate); }
+/* A section with nothing in it yet is still reachable, just de-emphasised. */
+.hub-tab.is-empty { color: #b6bcc4; }
+.hub-tab.is-empty[aria-selected="true"] { color: var(--ink-soft); }
+.hub-tab:focus-visible { outline: 3px solid #7aa7ff; outline-offset: -3px; }
+
+/* ---- Home: geographic index --------------------------------------------- */
+.geo-group + .geo-group { margin-top: 36px; }
+.geo-country {
+  margin: 0 0 4px; font-size: 12px; font-weight: 700;
+  letter-spacing: 1.2px; text-transform: uppercase; color: var(--slate);
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.geo-region-block { margin-top: 18px; }
+.geo-region {
+  margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--ink-soft);
+}
+
+.center-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* The landing page, kept deliberately plain: a white sheet with hairline-bordered
+   cards, no page tint, no card shadows and no hover lift. Scoped to
+   [data-view="home"] (hub.js sets it) so the center pages keep their layered
+   look, where cards do need to read as floating over the tinted background. */
+.hub[data-view="home"] { background: var(--panel-bg); }
+.hub[data-view="home"] .hub-bar { border-bottom: none; padding-bottom: 2px; }
+.hub[data-view="home"] .geo-country {
+  color: var(--ink-soft); letter-spacing: .9px; border-bottom: none;
+  padding-bottom: 0; margin-bottom: 2px;
+}
+.hub[data-view="home"] .geo-region { font-size: 13px; }
+.hub[data-view="home"] .center-card {
+  box-shadow: none; border-radius: 10px; padding: 14px 16px;
+}
+.hub[data-view="home"] .center-card:hover {
+  transform: none; box-shadow: none; border-color: var(--slate);
+}
+.hub[data-view="home"] .center-card.is-placeholder:hover { box-shadow: none; }
+
+/* Cards are real links, so middle-click, keyboard focus and browser
+   back/forward all work without any JS. */
+.center-card {
+  display: block; padding: 16px 18px; color: inherit; text-decoration: none;
+  background: var(--panel-bg); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.center-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+.center-card:focus-visible { outline: 3px solid #7aa7ff; outline-offset: 2px; }
+/* Scaffolding, not real research — dashed and flat so it reads as unfinished. */
+.center-card.is-placeholder { border-style: dashed; box-shadow: none; background: transparent; }
+.center-card.is-placeholder:hover { box-shadow: var(--shadow); }
+
+.center-card-top { display: flex; align-items: flex-start; gap: 10px; }
+.center-card-name { margin: 0; font-size: 16px; flex: 1; }
+.center-badge {
+  flex: none; font-size: 10.5px; font-weight: 700; line-height: 1;
+  text-transform: uppercase; letter-spacing: .5px;
+  padding: 5px 8px; border-radius: 6px;
+  background: var(--neutral-soft); color: var(--ink-soft);
+}
+.center-badge.is-documented { background: var(--data-soft); color: var(--data); }
+.center-card-role { margin: 8px 0 0; font-size: 12.5px; color: var(--ink); }
+.center-card-meta { margin: 3px 0 0; font-size: 12px; color: var(--ink-soft); }
+.center-card-summary {
+  margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-soft);
+}
+.center-card .hub-tags { margin-top: 12px; }
+
+/* ---- Section content ---------------------------------------------------- */
+.hub-section-title { margin: 0 0 4px; font-size: 17px; }
+.hub-lede {
+  margin: 0 0 18px; font-size: 14px; line-height: 1.55; color: var(--ink-soft);
+  max-width: 70ch;
+}
+.hub-section-title + .res-grid,
+.hub-section-title + .hub-empty { margin-top: 18px; }
+
+.res-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
+}
+.res-card {
+  padding: 18px 20px;
+  background: var(--panel-bg); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow);
+}
+.res-card h3 { margin: 0; font-size: 15px; }
+.res-card > p { margin: 8px 0 0; font-size: 13px; line-height: 1.55; }
+.res-card ul, .res-card ol { margin: 6px 0 0; padding-left: 20px; }
+.res-card li { margin-bottom: 5px; font-size: 13px; line-height: 1.5; }
+.res-card li > ul { margin-top: 5px; }
+.res-block { margin-top: 14px; }
+.res-block h4 {
+  margin: 0 0 6px; font-size: 11px; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+.res-steps li { margin-bottom: 7px; }
+.hub-chips { display: flex; flex-wrap: wrap; }
+
+/* Personas */
+.persona-head { display: flex; align-items: center; gap: 12px; }
+.persona-avatar {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--slate); color: #fff; font-size: 17px; font-weight: 700;
+}
+.persona-role { margin: 2px 0 0; font-size: 12.5px; color: var(--ink); }
+.persona-shift { margin: 2px 0 0; font-size: 12px; color: var(--ink-soft); }
+.persona-quote {
+  margin: 14px 0 0; padding: 10px 14px;
+  border-left: 3px solid var(--border); background: var(--bg);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px; font-style: italic; line-height: 1.5; color: var(--ink-soft);
+}
+
+/* Findings & supporting research */
+.finding-head { display: flex; align-items: flex-start; gap: 10px; }
+.finding-head h3 { flex: 1; }
+.impact-badge, .kind-badge {
+  flex: none; font-size: 10.5px; font-weight: 700; line-height: 1;
+  text-transform: uppercase; letter-spacing: .5px;
+  padding: 5px 8px; border-radius: 6px;
+  background: var(--neutral-soft); color: var(--ink-soft);
+}
+.finding-card[data-impact="high"]   .impact-badge { background: var(--fire-soft);   color: var(--fire); }
+.finding-card[data-impact="medium"] .impact-badge { background: var(--police-soft); color: var(--police); }
+
+/* Empty states name the data field to fill in, so the page documents itself. */
+.hub-empty {
+  padding: 26px 24px; border: 1px dashed var(--border); border-radius: 14px;
+  color: var(--ink-soft); max-width: 60ch;
+}
+.hub-empty p { margin: 0; font-size: 13.5px; line-height: 1.55; }
+.hub-empty strong { color: var(--ink); }
+.hub-empty-hint { margin-top: 8px !important; font-size: 12.5px !important; }
+.hub-empty code {
+  background: var(--neutral-soft); padding: 1px 5px; border-radius: 4px;
+  font-size: 12px;
+}
+
+/* =============================================================================
+ * The diagram, hosted inside the hub
+ * =============================================================================
+ * OVERRIDES of app.css. The diagram was written to own the whole viewport; here
+ * it is a flex child sitting under the hub bar instead. Everything inside it —
+ * the canvas, nodes, pan/zoom — is untouched.
+ * ========================================================================== */
+
+/* app.css: `.app { height: 100vh }`. As a flex child it takes the space left
+   over instead, and min-height:0 stops it forcing the bar off-screen. */
+.hub .app { height: auto; flex: 1; min-height: 0; }
+.hub .app[hidden] { display: none; }
+
+/* The hub bar already shows the center's name, location and visit date, so the
+   diagram's own floating header would just repeat it. Hidden, not removed:
+   app.js writes into #centerName / #centerSub. */
+.hub .app-header { display: none; }
+
+/* The floating cards were offset by 84px to clear that header, and capped at
+   `calc(100vh - N)` because they assumed the full viewport. Both assumptions
+   changed: pull them up, and measure against .app (their positioning parent)
+   rather than the viewport, so they can't spill past the bottom of the canvas. */
+.hub .layer-panel   { top: 16px; max-height: calc(100% - 32px); }
+.hub .layers-reopen { top: 16px; }
+.hub .detail        { top: 16px; max-height: calc(100% - 32px); }
+.hub .staff-card    { max-height: calc(100% - 36px); }
+
+/* Fullscreen puts .app back in charge of the whole screen, so restore it. */
+.hub .app:fullscreen { height: 100vh; }
+.hub .app:-webkit-full-screen { height: 100vh; }
+
+/* ---- Responsive ---------------------------------------------------------- */
+@media (max-width: 820px) {
+  .hub-bar { padding: 12px 14px 0; }
+  .hub-page { padding: 18px 14px 48px; }
+  .hub-title { font-size: 18px; }
+  .center-grid, .res-grid { grid-template-columns: 1fr; }
+}

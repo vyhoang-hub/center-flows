@@ -6,10 +6,15 @@ var Panels = {
   data: null,
   layerState: {},        // { layerId: true|false }
   onChange: null,        // called whenever visibility changes
+  _wired: false,         // show-all/hide-all listeners bound? (see initLayers)
 
   initLayers: function (data, onChange) {
     this.data = data;
     this.onChange = onChange;
+    // Start from a clean slate. This runs again for each center you open, and
+    // centers don't share layer ids — keeping the old object would leave another
+    // center's layers in layerState, where isVisible() would still honour them.
+    this.layerState = {};
     data.layers.forEach(function (l) { Panels.layerState[l.id] = l.on !== false; });
 
     var host = document.getElementById("layerList");
@@ -47,8 +52,14 @@ var Panels = {
         }],
       };
     }
+    var card = document.getElementById("staffCard");
+    if (!about) {
+      // No card for this center — clear any previous center's. `.staff-card:empty`
+      // hides it (css/app.css), so emptying is enough.
+      card.innerHTML = "";
+      card.removeAttribute("data-layers");
+    }
     if (about) {
-      var card = document.getElementById("staffCard");
       card.dataset.layers = (about.layers || []).join(",");
 
       // Render a list item, which may itself carry nested `children`.
@@ -97,8 +108,14 @@ var Panels = {
       });
     }
 
-    document.getElementById("showAll").addEventListener("click", function () { Panels.setAll(true); });
-    document.getElementById("hideAll").addEventListener("click", function () { Panels.setAll(false); });
+    // Bind these once per page. The buttons live in the static markup, so they
+    // survive re-initialisation; re-adding the listeners on every initLayers
+    // would make one click fire setAll() once per center ever opened.
+    if (!this._wired) {
+      this._wired = true;
+      document.getElementById("showAll").addEventListener("click", function () { Panels.setAll(true); });
+      document.getElementById("hideAll").addEventListener("click", function () { Panels.setAll(false); });
+    }
   },
 
   toggle: function (id) {
@@ -191,7 +208,11 @@ var Detail = {
     document.getElementById("detail").classList.remove("open");
     this.currentId = null;
     // Clear the selected-shape highlight (× button, Escape, or re-click).
-    if (window.Diagram && Diagram.select) Diagram.select(null);
+    // `typeof`, not `window.Diagram`: in the encrypted bundle the whole payload
+    // runs inside new Function(), so top-level `var Diagram` is function-scoped
+    // and never becomes a window property. Checking window.Diagram there was
+    // always false, which left the selection ring stuck on after closing.
+    if (typeof Diagram !== "undefined" && Diagram.select) Diagram.select(null);
   },
 };
 

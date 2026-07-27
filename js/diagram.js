@@ -39,6 +39,7 @@ var Diagram = {
   data: null,
   onNodeClick: null,
   _selectedEl: null,   // the currently selected node element (for the highlight)
+  _fitBound: false,    // window/resize refit hooks bound? (see render)
 
   /* Mark a node element as selected (adds the outline ring). Pass null to clear.
      Clicking a node calls this; closing the detail card clears it. */
@@ -77,20 +78,31 @@ var Diagram = {
 
     this._initInteractions();
     this.fit();
-    window.addEventListener("resize", function () { Diagram.fit(); });
 
-    // In an embedded iframe (e.g. SharePoint) the canvas often has 0 size at
-    // first render, so the initial fit() can't compute a real scale. Re-fit
-    // once the element actually gets a size, and again after full load, so the
-    // diagram doesn't end up scaled/positioned off-screen.
-    var wrap = document.getElementById("canvasWrap");
-    if (wrap && typeof ResizeObserver !== "undefined") {
-      var ro = new ResizeObserver(function () {
-        if (wrap.clientWidth > 0 && wrap.clientHeight > 0) Diagram.fit();
-      });
-      ro.observe(wrap);
+    // Refit hooks are bound ONCE per page, not once per render. render() runs
+    // again every time a different center's diagram is opened, and these
+    // listeners are never removed — without this guard each visit would stack
+    // another copy and fit() would run N times per resize. Same reasoning as the
+    // wrap._interactive guard in _initInteractions below.
+    if (!this._fitBound) {
+      this._fitBound = true;
+      window.addEventListener("resize", function () { Diagram.fit(); });
+
+      // In an embedded iframe (e.g. SharePoint) the canvas often has 0 size at
+      // first render, so the initial fit() can't compute a real scale. Re-fit
+      // once the element actually gets a size, and again after full load, so the
+      // diagram doesn't end up scaled/positioned off-screen. This also covers
+      // the hub: the canvas has no size while another tab is showing, so
+      // returning to the diagram tab refits automatically.
+      var wrap = document.getElementById("canvasWrap");
+      if (wrap && typeof ResizeObserver !== "undefined") {
+        var ro = new ResizeObserver(function () {
+          if (wrap.clientWidth > 0 && wrap.clientHeight > 0) Diagram.fit();
+        });
+        ro.observe(wrap);
+      }
+      window.addEventListener("load", function () { Diagram.fit(); });
     }
-    window.addEventListener("load", function () { Diagram.fit(); });
   },
 
   /* Write the current scale + pan to the stage as a single transform. */

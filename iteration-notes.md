@@ -11,11 +11,27 @@
 - [ ] Fix the alignment of the cards on the home page
 -->
 
-_(nothing pending — the 4 items here were done in Rounds 15–16)_
-
 ---
 
 ## Done
+
+### Round 18 — Plain white landing page + pills on the title row
+- [x] **Landing page is now a white sheet.** Scoped to `.hub[data-view="home"]` (a new `Hub._view()` sets the attribute), so center pages keep their layered look where cards need to read as floating. Home now has: white page background instead of the grey tint, no bar border, no card shadows, no hover lift (hover just darkens the border), tighter card padding, smaller radius, and country headings as quiet grey labels with no rule under them. _(css/hub.css, js/hub.js)_
+- [x] **Center-page tags moved onto the title row, right-aligned.** They were stacked on their own line under the title; they now sit on the same row as the center name and are pushed to the right edge (`margin-left: auto`), so the bar costs one row instead of two and the diagram gains that height. Below ~900px they wrap to their own line, still right-aligned. _(js/hub.js `renderCenterBar`, css/hub.css `.hub-bar-main .hub-tags`)_
+- [ ] **Rebuild `dist/index.html`** — needs `bash build.sh` + the passphrase (only you can run it).
+
+### Round 17 — Scaled the site into a location-organized User Research Hub
+- [x] **Home page indexes every center by country → state/region**, built from `meta.geo` and sorted alphabetically. Cards show name, location, visit date, summary, tags, and an artifact count (or a "Placeholder" badge). _(new js/hub.js, new css/hub.css)_
+- [x] **Reusable center page** with six sub-nav tabs: Overview, Mental models, Personas, Workflows, Key findings, Supporting research. Sections with no data yet render an empty state naming the field to fill in. _(js/hub.js)_
+- [x] **The existing diagram is NORCOMM's "Mental models" tab**, unchanged — the `.app` markup is byte-identical and app.css was not edited. `hub.css` hosts it as a flex child with sibling overrides, and the hub scrolls inside `#hubMain`, so `html, body { overflow: hidden }` stays true and pan/zoom is unaffected.
+- [x] **Hash routes, not separate files** (`#/`, `#/c/<id>`, `#/c/<id>/<section>`) — the published site is one encrypted `dist/index.html`, so a second `.html` file would 404. Deep links and back/forward work.
+- [x] **`js/app.js` IIFE → `CenterApp.mount(data)`**, with idempotency guards so switching tabs can't duplicate state: `Panels.layerState` reset, `showAll`/`hideAll` bound once, `Diagram._fitBound`, stale About card cleared, `CenterApp._controlsWired`, and the node detail card closes when you leave the diagram. _(js/app.js, js/panels.js, js/diagram.js)_
+- [x] **Fixed a real pre-existing bug:** `Detail.close()` tested `window.Diagram`, which is always false in the encrypted build because the payload runs inside `new Function()`. Now `typeof Diagram !== "undefined"`. _(js/panels.js)_
+- [x] **Centers self-register** — each `data/*.js` pushes onto `window.RESEARCH_CENTERS`, so adding a center is adding a file plus one `<script>` line. NORCOMM got `geo`, `status` and a `research` block (additive only; no existing content touched). Added two clearly-labelled placeholder centers, one in a second country. _(data/norcomm.js, new data/harbor-point.js, new data/riverside.js)_
+- [x] **`data/_template.js` refreshed** and its four stale bits fixed (`octagon` → `resource`, dead `fill:`, emoji icon → Lucide key, legacy `staff` → `about`, stage 2002 → 2210).
+- [x] **`build.sh` bundles every center** (`data/*.js` except `_template.js`); positional args still build a single center. Added `RESEARCH_CENTERS` to the plaintext canary list here and in the deploy guard. _(build.sh, .github/workflows/deploy-pages.yml)_
+- [x] **Docs updated** — README route table, add-a-center flow, `research` data model; HOSTING notes that every center lives in the one encrypted file and that one passphrase covers the whole hub. _(README.md, HOSTING.md)_
+- [x] Verified: 15 nodes / 31 connectors / 20 pills render identically before and after, layer toggles fire once per click, layer state doesn't duplicate across tab round-trips, deep links and bogus ids behave, and the `--plain` bundle matches the multi-file version.
 
 ### Round 16 — Detail-panel content updates + toggle fixes
 - [x] **Incident-flow story texts now toggle with Incident Flow.** They were already tagged `flow`, but `applyVisibility()` only queried `.node/.connector/.pill/.zone/.edge` — `.annotation-note` (and `.region`) were never toggled. Added them to the query so the journey texts hide/show with the flow lines. _(js/app.js)_

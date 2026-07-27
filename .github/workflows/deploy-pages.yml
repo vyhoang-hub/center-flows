@@ -67,8 +67,11 @@ jobs:
 
           # And it must not contain research content in the clear. These strings
           # exist only in the plaintext data, never in base64 ciphertext.
+          # RESEARCH_CENTERS is the catch-all: every center's data file ends with
+          # the line that registers itself on it, so it catches any center leaking
+          # in the clear, including ones added after this was written.
           leaked=0
-          for canary in 'Priority 1' 'NORCOMM' 'Bellevue' 'DISPATCH_CENTER'; do
+          for canary in 'Priority 1' 'NORCOMM' 'Bellevue' 'DISPATCH_CENTER' 'RESEARCH_CENTERS'; do
             if grep -qF "$canary" "$BUNDLE"; then
               echo "::error::plaintext '$canary' found in $BUNDLE — refusing to publish."
               leaked=1

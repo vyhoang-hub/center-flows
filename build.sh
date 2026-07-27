@@ -4,20 +4,23 @@
 # =============================================================================
 # Why: some hosts (notably SharePoint document libraries) can't serve a folder
 # of linked files — relative links to css/js/assets break and you get a blank
-# page. This script inlines everything (CSS, JS, the data file, and every SVG)
-# into a single HTML file with no external references, so it can be dropped
+# page. This script inlines everything (CSS, JS, every center's data, and every
+# SVG) into a single HTML file with no external references, so it can be dropped
 # anywhere as one file.
 #
 # By default the bundle is ENCRYPTED behind a passphrase (see crypt.sh): the
-# diagram and the research data are stored as ciphertext and only decrypted in
+# diagrams and the research data are stored as ciphertext and only decrypted in
 # the reader's browser. That is what makes it safe to publish to GitHub Pages,
 # which is readable by anyone who has the URL. See HOSTING.md.
 #
-# Usage:   bash build.sh                    # encrypted bundle of data/norcomm.js
-#          bash build.sh data/other.js      # encrypt a different center
+# Usage:   bash build.sh                    # encrypted bundle of EVERY center
+#          bash build.sh data/other.js      # just one center (or list several)
 #          bash build.sh --plain            # UNENCRYPTED, for local preview only
 #
 # Output:  dist/index.html   (open it by double-click to verify)
+#
+# Every data/*.js except _template.js is bundled, so adding a center means adding
+# the file and one <script> line in index.html — this script needs no changes.
 #
 # No Node/npm/Python needed — pure bash + base64 + openssl (all already here).
 # Re-run this whenever you change the app or the data and want a fresh bundle.
@@ -29,30 +32,42 @@ cd "$(dirname "$0")"
 # --plain skips encryption. Handy for checking a change renders before you go to
 # the trouble of typing a passphrase, but never publish the result.
 ENCRYPT=1
-DATA_FILE=""
+DATA_FILES=()
 for arg in "$@"; do
   case "$arg" in
     --plain) ENCRYPT=0 ;;
-    -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
     -*) echo "ERROR: unknown option: $arg" >&2; exit 1 ;;
-    *)  DATA_FILE="$arg" ;;
+    *)  DATA_FILES+=("$arg") ;;
   esac
 done
-DATA_FILE="${DATA_FILE:-data/norcomm.js}"
+
+# No files named: bundle every center. _template.js is skipped because it's a
+# copy-me reference, not a real center — bundling it would put a "REPLACE-ME"
+# card on the home page.
+if [ "${#DATA_FILES[@]}" -eq 0 ]; then
+  for f in data/*.js; do
+    [ "$(basename "$f")" = "_template.js" ] && continue
+    DATA_FILES+=("$f")
+  done
+fi
+[ "${#DATA_FILES[@]}" -gt 0 ] || { echo "ERROR: no data files found in data/" >&2; exit 1; }
 
 OUT_DIR="dist"
 OUT="$OUT_DIR/index.html"
 
-[ -f "$DATA_FILE" ] || { echo "ERROR: data file not found: $DATA_FILE" >&2; exit 1; }
+for f in "${DATA_FILES[@]}"; do
+  [ -f "$f" ] || { echo "ERROR: data file not found: $f" >&2; exit 1; }
+done
 mkdir -p "$OUT_DIR"
 
 if [ "$ENCRYPT" -eq 1 ]; then
-  echo "Bundling '$DATA_FILE' -> $OUT (encrypted)"
+  echo "Bundling ${#DATA_FILES[@]} center(s) -> $OUT (encrypted)"
 else
-  echo "Bundling '$DATA_FILE' -> $OUT (PLAIN — do not publish this)"
+  echo "Bundling ${#DATA_FILES[@]} center(s) -> $OUT (PLAIN — do not publish this)"
 fi
 
-# --- 1. Build window.ASSET_MAP from every .svg the data file references -------
+# --- 1. Build window.ASSET_MAP from every .svg the data files reference --------
 # Each SVG becomes a base64 data: URI so it lives inside the HTML.
 ASSET_JS="$(mktemp)"
 PAYLOAD="$(mktemp)"
@@ -60,10 +75,12 @@ ENVELOPE="$(mktemp)"
 trap 'rm -f "$ASSET_JS" "$PAYLOAD" "$ENVELOPE"' EXIT
 echo "window.ASSET_MAP = {" > "$ASSET_JS"
 count=0
-# Pull every asset name out of the data file. Assets are referenced by several
+# Pull every asset name out of every data file. Assets are referenced by several
 # keys: `asset` (connectors/regions), `glow` and `iconAsset` (resource nodes &
 # pills). Names are either 40-char Figma hashes or slugs like inside-center-blob.
-for hash in $(grep -oE '(asset|glow|iconAsset): "[A-Za-z0-9_-]+"' "$DATA_FILE" | grep -oE '"[A-Za-z0-9_-]+"' | tr -d '"' | sort -u); do
+# `grep -h` suppresses the filename prefix that appears once there are 2+ files;
+# `sort -u` then de-duplicates assets shared between centers.
+for hash in $(grep -hoE '(asset|glow|iconAsset): "[A-Za-z0-9_-]+"' "${DATA_FILES[@]}" | grep -oE '"[A-Za-z0-9_-]+"' | tr -d '"' | sort -u); do
   svg="assets/$hash.svg"
   if [ ! -f "$svg" ]; then
     echo "  WARNING: referenced asset missing, skipping: $svg" >&2
@@ -80,17 +97,22 @@ echo "  inlined $count SVG asset(s)"
 # This is the app's brain plus the research content. In an encrypted build it all
 # becomes one ciphertext blob; the order is the same load order index.html uses,
 # because diagram.js/panels.js declare top-level `var Diagram`/`Panels`/`Detail`
-# that app.js then reads — they have to end up in one shared scope.
+# that app.js and hub.js then read — they have to end up in one shared scope, and
+# hub.js goes LAST because it boots the router.
 {
   cat "$ASSET_JS"        # window.ASSET_MAP (inlined SVGs) — must come first
   echo ''
-  cat "$DATA_FILE"       # window.DISPATCH_CENTER
-  echo ''
+  for f in "${DATA_FILES[@]}"; do
+    cat "$f"             # each center registers itself on window.RESEARCH_CENTERS
+    echo ''
+  done
   cat js/diagram.js
   echo ''
   cat js/panels.js
   echo ''
   cat js/app.js
+  echo ''
+  cat js/hub.js          # last: renders the home page / routes to a center
 } > "$PAYLOAD"
 
 if [ "$ENCRYPT" -eq 1 ]; then
@@ -105,11 +127,12 @@ fi
   echo '<head>'
   echo '  <meta charset="UTF-8" />'
   echo '  <meta name="viewport" content="width=device-width, initial-scale=1.0" />'
-  echo '  <title>Dispatch Workflow</title>'
+  echo '  <title>User Research Hub</title>'
   echo '  <!-- Bundled build: all CSS/JS/data/SVGs inlined. Generated by build.sh. -->'
   echo '  <style>'
   cat css/theme.css
   cat css/app.css
+  cat css/hub.css        # after app.css — it overrides a few of its rules
   [ "$ENCRYPT" -eq 1 ] && cat css/gate.css
   echo '  </style>'
   echo '</head>'
@@ -121,7 +144,7 @@ fi
     cat <<'GATE'
   <div class="gate" id="gate">
     <div class="gate-card">
-      <h1>Dispatch Workflow</h1>
+      <h1>User Research Hub</h1>
       <p id="gateNote">This page holds internal UX research. Enter the passphrase to view it.</p>
       <div class="gate-row">
         <input type="password" id="gatePass" placeholder="Passphrase"
@@ -169,9 +192,13 @@ GATE
 # --- 4. Safety net: prove no plaintext research leaked into an encrypted build -
 # Cheap insurance against a future edit accidentally putting the payload back in
 # the clear. Canaries are strings that only exist in the research content.
+#
+# 'RESEARCH_CENTERS' is the catch-all: every data file ends with the line that
+# registers itself on it, so this one string catches ANY center leaking in the
+# clear — including centers added after this was written.
 if [ "$ENCRYPT" -eq 1 ]; then
   leaked=0
-  for canary in 'Priority 1' 'NORCOMM' 'Bellevue' 'DISPATCH_CENTER'; do
+  for canary in 'Priority 1' 'NORCOMM' 'Bellevue' 'DISPATCH_CENTER' 'RESEARCH_CENTERS'; do
     if grep -qF "$canary" "$OUT"; then
       echo "ERROR: plaintext '$canary' found in $OUT — refusing to leave a leaky bundle." >&2
       leaked=1

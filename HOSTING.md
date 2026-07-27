@@ -8,8 +8,10 @@
   in the reader's browser. See [Encryption](#encryption-how-the-passphrase-gate-works)
   below.
 - **Only one file is published.** The workflow uploads `dist/index.html` and
-  nothing else, so `data/norcomm.js`, `iteration-notes.md`, `concept-idea` and the
-  rest of the repo are not served at all.
+  nothing else, so everything in `data/`, `iteration-notes.md`, `concept-idea` and
+  the rest of the repo are not served at all. **Every** center is inside that one
+  encrypted file — the hub's separate "pages" are URL hashes, not separate files, so
+  there is nothing else to publish as the hub grows.
 - **Why this host is needed:** SharePoint
   cannot run this app's JavaScript in an embed (its file preview / File-viewer /
   "Copy embed code" all route through `_layouts/15/embed.aspx`, a script-blocking
@@ -30,9 +32,10 @@ cached or indexed — encryption stops future access, not past access.
 
 Two follow-ups that encryption does **not** fix:
 
-1. **The repo itself is public**, so `data/norcomm.js` is still readable on
-   github.com, and it appears in earlier commits even if deleted. Making the repo
-   private (Settings → Danger Zone) closes both; Pages keeps working.
+1. **The repo itself is public**, so every file in `data/` is readable on
+   github.com, and they appear in earlier commits even if deleted. Making the repo
+   private (Settings → Danger Zone) closes both; Pages keeps working. This matters
+   more as the hub grows: each new center is another plaintext file in `data/`.
 2. **Consider whether the alert-tone detail belongs in the document at all** —
    `data/norcomm.js` maps specific tones to "Priority 1 / weapon involved" and to a
    20-minute unassigned-call threshold.
@@ -54,8 +57,8 @@ Two follow-ups that encryption does **not** fix:
 
 ## Encryption: how the passphrase gate works
 
-`bash build.sh` asks for a passphrase and wraps the app's code + data in
-AES-256-CBC with an HMAC-SHA256 tag (`crypt.sh` builds it, `js/gate.js` opens it).
+`bash build.sh` asks for a passphrase and wraps the app's code + every center's data
+in AES-256-CBC with an HMAC-SHA256 tag (`crypt.sh` builds it, `js/gate.js` opens it).
 Both sides use only primitives that OpenSSL and the browser's built-in WebCrypto
 share, so there is no JavaScript crypto library to trust or update.
 
@@ -90,7 +93,14 @@ in the SharePoint page text or by email.
 
 `bash build.sh --plain` builds an unencrypted bundle for quick checks. It is
 readable by anyone, the deploy workflow refuses to publish it, and you should not
-share it.
+share it. **Don't commit it either** — re-run `bash build.sh` (encrypted) before you
+commit `dist/index.html`, or `git checkout -- dist/index.html` to put the last
+encrypted build back.
+
+One passphrase covers the whole hub. There is no per-center access: anyone with the
+passphrase can open every center in the bundle. If a future center needs narrower
+access, that's the point to move to the Azure host below rather than to build a
+second gate.
 
 ---
 
@@ -135,12 +145,19 @@ static HTML/CSS/JS (no build step), so deployment is straightforward.
 
 ---
 
-## Updating the diagram (either host)
+## Updating research content (either host)
 
-1. Edit the data (`data/norcomm.js`) or add a center from `data/_template.js`.
-2. Check it renders: `bash build.sh --plain`, then open `dist/index.html`.
-3. `bash build.sh` and enter the passphrase to produce the encrypted bundle.
+1. Edit a center's data file (e.g. `data/norcomm.js`), or add a new center by
+   copying `data/_template.js` and adding one `<script>` line to `index.html`.
+   See "How to add another center" in `README.md`.
+2. Check it renders locally — double-click `index.html`, or bundle it first with
+   `bash build.sh --plain` and open `dist/index.html`.
+3. `bash build.sh` and enter the passphrase to produce the encrypted bundle. Every
+   `data/*.js` except `_template.js` is included automatically, so a new center needs
+   no change here.
 4. Commit `dist/index.html` and push to `main` — Pages republishes automatically.
 
-Step 3 is required: the site now serves `dist/index.html`, so a data change is not
-live until you rebuild and commit that file.
+Step 3 is required: the site serves `dist/index.html`, so a data change is not live
+until you rebuild and commit that file. If you built with `--plain` in step 2, make
+sure step 3 actually ran before committing — the deploy guard will reject a plain
+bundle, but it's easier to catch here.

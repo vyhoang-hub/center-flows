@@ -1,9 +1,10 @@
 /* =============================================================================
  * NORCOMM — dispatch center data (1:1 rebuild from Figma node 54:146 "norcomm-2")
  * =============================================================================
- * This file IS the diagram. The UI reads this object and draws everything from
- * it. To add a new dispatch center later, copy data/_template.js, fill it in,
- * and point index.html at your new file. You never touch the UI code.
+ * This file IS the diagram, and the container for everything else learned at this
+ * site visit (see `research` at the bottom). The UI reads this object and draws
+ * everything from it. To add another center, copy data/_template.js, fill it in,
+ * and add one <script> line in index.html. You never touch the UI code.
  *
  * COORDINATE SYSTEM
  *   The "stage" is 2210 x 1303 units — the Figma frame's size. Every x/y is a
@@ -27,6 +28,10 @@ window.DISPATCH_CENTER = {
     name: "NORCOMM",
     location: "Regional 911 / Dispatch Center",
     visitDate: "2026",
+    // Where this center sits in the hub's index. The home page groups by
+    // country, then region — `city` only shows on the card.
+    geo: { country: "United States", region: "Washington", city: "Bellevue" },
+    status: "documented",   // "documented" | "placeholder"
     summary:
       "A combined 911 and non-emergency dispatch center handling call intake, " +
       "CAD entry, and separate fire/EMS and police dispatch workflows.",
@@ -399,4 +404,132 @@ window.DISPATCH_CENTER = {
       },
     ],
   },
+
+  // ---- Research (the center page's tabs) ------------------------------------
+  // Everything learned at this site visit, beyond the diagram itself. Each key
+  // maps to one tab; anything missing or empty shows an empty state naming the
+  // field to fill in, so the page tells you how to extend it.
+  //
+  // `overview` is deliberately absent: the hub falls back to the `about`
+  // sections above, so the staff distribution and site-visit notes are authored
+  // once and shown in both places.
+  research: {
+    // view:"diagram" means this artifact IS the interactive canvas above —
+    // opening the Mental models tab shows the diagram, not a card.
+    mentalModels: [
+      {
+        id: "floor-model",
+        title: "Dispatch floor mental model",
+        description:
+          "How an incident moves across the floor: call intake, CAD entry, and " +
+          "the two dispatch positions, with the systems and radio channels each " +
+          "role touches.",
+        view: "diagram",
+      },
+    ],
+
+    // PLACEHOLDER — replace with personas built from the site-visit notes.
+    personas: [
+      {
+        id: "call-taker",
+        name: "Call taker (placeholder)",
+        role: "Answers 911 and non-emergency lines; opens the CAD incident",
+        shift: "Rotating, 12-hour shifts",
+        quote: "Placeholder quote — swap in a real one from the interview notes.",
+        goals: [
+          "Placeholder: get a location and callback number before anything else",
+          "Placeholder: hand a complete incident to the dispatcher quickly",
+        ],
+        frustrations: [
+          "Placeholder: re-asking questions the caller has already answered",
+        ],
+        tools: ["Phone system", "CAD"],
+      },
+      {
+        id: "dispatcher",
+        name: "Dispatcher (placeholder)",
+        role: "Assigns and tracks responding units on the radio",
+        shift: "Rotating, 12-hour shifts",
+        goals: ["Placeholder: keep an accurate picture of who is available"],
+        frustrations: ["Placeholder: split attention between radio and screens"],
+        tools: ["CAD", "Radio console"],
+      },
+    ],
+
+    // PLACEHOLDER — written workflows live here; the diagram stays under
+    // Mental models.
+    workflows: [
+      {
+        id: "call-to-dispatch",
+        title: "Call intake to unit assignment (placeholder)",
+        description:
+          "Placeholder walkthrough of the path from a ringing line to a unit " +
+          "en route. Replace each step with what was actually observed.",
+        steps: [
+          "Placeholder: the line rings and is answered.",
+          "Placeholder: location and nature of the call are captured.",
+          "Placeholder: the incident is entered and routed to the right position.",
+          "Placeholder: units are assigned and acknowledged on the radio.",
+        ],
+      },
+      {
+        id: "shift-handoff",
+        title: "Shift handoff (placeholder)",
+        description:
+          "Placeholder: how in-progress incidents and floor context pass to the " +
+          "oncoming shift.",
+        steps: [
+          "Placeholder: outgoing position summarises open incidents.",
+          "Placeholder: oncoming position takes over the console.",
+        ],
+      },
+    ],
+
+    // PLACEHOLDER — one entry per finding, ranked by impact.
+    findings: [
+      {
+        id: "finding-one",
+        title: "First key finding (placeholder)",
+        impact: "high",
+        detail:
+          "Placeholder summary of what was observed and why it matters. Keep it " +
+          "to a couple of sentences and put the specifics in the evidence list.",
+        evidence: [
+          "Placeholder: what was seen on the floor.",
+          "Placeholder: what a participant said about it.",
+        ],
+      },
+      {
+        id: "finding-two",
+        title: "Second key finding (placeholder)",
+        impact: "medium",
+        detail: "Placeholder summary of a smaller but recurring issue.",
+        evidence: ["Placeholder observation."],
+      },
+    ],
+
+    // PLACEHOLDER — the raw material behind the findings.
+    supporting: [
+      {
+        id: "site-notes",
+        title: "Site visit notes (placeholder)",
+        kind: "note",
+        description:
+          "Placeholder pointer to the raw notes taken during the visit.",
+      },
+      {
+        id: "floor-photos",
+        title: "Floor and console photos (placeholder)",
+        kind: "photo",
+        description:
+          "Placeholder pointer to the console and floor-layout photos.",
+      },
+    ],
+  },
 };
+
+/* Register with the hub. Every data file ends with a line like this, which is
+   what makes it appear on the home page — there is no separate list to keep in
+   sync. `window.DISPATCH_CENTER` is kept for backwards compatibility; newer
+   center files can push their object directly. */
+(window.RESEARCH_CENTERS = window.RESEARCH_CENTERS || []).push(window.DISPATCH_CENTER);
